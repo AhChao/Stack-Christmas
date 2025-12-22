@@ -368,7 +368,7 @@ const handleStartClick = () => {
       </div>
 
       <div class="footer-actions">
-        <a href="../assets/christmas_tree_pnp.pdf" download="Stack_Christmas_PNP.pdf" class="pnp-btn">
+        <a href="https://drive.google.com/file/d/1B58wUeKUsjX7cUQq0BGC0E5PJiBAYsm5/view" target="_blank" class="pnp-btn">
           <span class="icon">📄</span> {{ t.downloadPnp }}
         </a>
         <button class="start-btn" @click="handleStartClick">
@@ -740,7 +740,7 @@ const handleStartClick = () => {
 }
 
 .start-btn {
-  flex: 2;
+  flex: 1;
   background: #e74c3c;
   color: white;
   border: none;
@@ -760,7 +760,7 @@ const handleStartClick = () => {
 }
 
 .pnp-btn {
-  flex: 1;
+  flex: 2;
   background: white;
   color: #1a472a;
   border: 2px solid #1a472a;
