@@ -8,7 +8,7 @@ import PlayerArea from './PlayerArea.vue';
 import GameHUD from './GameHUD.vue';
 import { AiAgent } from '../logic/aiAgent';
 
-const props = defineProps(['mode', 'difficulty']);
+const props = defineProps(['mode', 'difficulty', 'randomBoard', 'paidMulligan']);
 const emit = defineEmits(['back']);
 
 const colors = ['R', 'G', 'B'];
@@ -36,17 +36,37 @@ const showRedrawMessage = ref(false);
 const turnCount = ref(1);
 const lastMove = ref(null);
 const highlightedCell = ref(null);
+const discardPile = ref([]);
+const showPaidMulliganModal = ref(false);
+const selectedTokensForPaidMulligan = ref([]);
 
 function initBoard() {
-    const layouts = [
-        [['R', 'G', 'B'], ['B', 'R', 'G'], ['G', 'B', 'R']],
-        [['G', 'B', 'R'], ['R', 'G', 'B'], ['B', 'R', 'G']],
-        [['B', 'R', 'G'], ['G', 'B', 'R'], ['R', 'G', 'B']]
-    ];
-    const selectedLayout = layouts[Math.floor(Math.random() * 3)];
-    board.value = selectedLayout.map(row => 
-        row.map(color => ({ color, pattern: null, rotation: 0, lastPlaced: false }))
-    );
+    if (props.randomBoard) {
+        // 3 Red, 3 Green, 3 Brown
+        const pool = ['R', 'R', 'R', 'G', 'G', 'G', 'B', 'B', 'B'];
+        // Shuffle pool
+        for (let i = pool.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [pool[i], pool[j]] = [pool[j], pool[i]];
+        }
+        
+        const flat = pool.map(color => ({ color, pattern: null, rotation: 0, lastPlaced: false }));
+        board.value = [
+            [flat[0], flat[1], flat[2]],
+            [flat[3], flat[4], flat[5]],
+            [flat[6], flat[7], flat[8]]
+        ];
+    } else {
+        const layouts = [
+            [['R', 'G', 'B'], ['B', 'R', 'G'], ['G', 'B', 'R']],
+            [['G', 'B', 'R'], ['R', 'G', 'B'], ['B', 'R', 'G']],
+            [['B', 'R', 'G'], ['G', 'B', 'R'], ['R', 'G', 'B']]
+        ];
+        const selectedLayout = layouts[Math.floor(Math.random() * 3)];
+        board.value = selectedLayout.map(row => 
+            row.map(color => ({ color, pattern: null, rotation: 0, lastPlaced: false }))
+        );
+    }
 }
 
 function initDeck() {
@@ -167,6 +187,15 @@ function handlePlace(r, c) {
             }
 
             for (let i = 0; i < drawCount; i++) {
+                if (deck.value.length === 0 && discardPile.value.length > 0) {
+                    deck.value = [...discardPile.value];
+                    discardPile.value = [];
+                    // Shuffle deck
+                    for (let j = deck.value.length - 1; j > 0; j--) {
+                        const k = Math.floor(Math.random() * (j + 1));
+                        [deck.value[j], deck.value[k]] = [deck.value[k], deck.value[j]];
+                    }
+                }
                 if (deck.value.length > 0 && player.hand.length < handLimit.value) {
                     player.hand.push(deck.value.pop());
                 }
@@ -319,6 +348,56 @@ function confirmVictoryModal() {
     waitingForStar.value = true;
 }
 
+function openPaidMulliganModal() {
+    selectedTokensForPaidMulligan.value = [];
+    showPaidMulliganModal.value = true;
+}
+
+function toggleTokenSelection(color) {
+    const index = selectedTokensForPaidMulligan.value.indexOf(color);
+    if (index > -1) {
+        selectedTokensForPaidMulligan.value.splice(index, 1);
+    } else if (selectedTokensForPaidMulligan.value.length < 2) {
+        selectedTokensForPaidMulligan.value.push(color);
+    }
+}
+
+function handlePaidMulligan() {
+    if (selectedTokensForPaidMulligan.value.length !== 2) return;
+    
+    const player = players.value[currentPlayerIndex.value];
+    
+    // Spend tokens
+    selectedTokensForPaidMulligan.value.forEach(color => {
+        player.decorationUses[color] = false;
+    });
+    
+    // Discard current hand
+    discardPile.value.push(...player.hand);
+    const drawCount = player.hand.length;
+    player.hand = [];
+    
+    // Draw new cards
+    for (let i = 0; i < drawCount; i++) {
+        if (deck.value.length === 0 && discardPile.value.length > 0) {
+            deck.value = [...discardPile.value];
+            discardPile.value = [];
+            // Shuffle deck
+            for (let j = deck.value.length - 1; j > 0; j--) {
+                const k = Math.floor(Math.random() * (j + 1));
+                [deck.value[j], deck.value[k]] = [deck.value[k], deck.value[j]];
+            }
+        }
+        if (deck.value.length > 0) {
+            player.hand.push(deck.value.pop());
+        }
+    }
+    
+    showPaidMulliganModal.value = false;
+    startToast.value = { show: true, message: `${player.name} 消耗了兩個指示物重抽了手牌！` };
+    setTimeout(() => startToast.value.show = false, 2000);
+}
+
 function handleBoardClick(r, c) {
     if (waitingForStar.value) {
         if (r === 1 && c === 1) {
@@ -346,6 +425,8 @@ function startGame() {
     lastMove.value = null;
     highlightedCell.value = null;
     moveHistory.value = [];
+    discardPile.value = [];
+    showPaidMulliganModal.value = false;
     
     initBoard();
     initDeck();
@@ -403,6 +484,9 @@ onMounted(() => {
       @select-deco="(color) => !players[1].isAi && (selectedDecorationColor = color)"
       :can-undo="!players[1].isAi && moveHistory.length > 0"
       @undo="handleUndo"
+      :paid-mulligan-enabled="props.paidMulligan"
+      @request-paid-mulligan="openPaidMulliganModal"
+      :difficulty="props.difficulty"
     />
 
     <div class="middle-area">
@@ -456,6 +540,9 @@ onMounted(() => {
       @select-deco="(color) => !players[0].isAi && (selectedDecorationColor = color)"
       :can-undo="!players[0].isAi && moveHistory.length > 0"
       @undo="handleUndo"
+      :paid-mulligan-enabled="props.paidMulligan"
+      @request-paid-mulligan="openPaidMulliganModal"
+      :difficulty="props.difficulty"
     />
 
     <!-- Modal & Toasts -->
@@ -482,6 +569,41 @@ onMounted(() => {
 
     <div v-if="startToast.show" class="start-toast-overlay">
       <div class="start-toast">{{ startToast.message }}</div>
+    </div>
+
+    <!-- Paid Mulligan Modal -->
+    <div v-if="showPaidMulliganModal" class="modal-overlay">
+      <div class="modal paid-mulligan-modal">
+        <h3>選擇要消耗的兩個指示物</h3>
+        <p>此動作將消耗指示物且無任何效果，僅用於支付重抽代價</p>
+        
+        <div class="token-selection-grid">
+          <div 
+            v-for="color in ['R', 'G', 'B']" 
+            :key="color"
+            class="token-item"
+            :class="{ 
+              'selected': selectedTokensForPaidMulligan.includes(color),
+              'disabled': !players[currentPlayerIndex].decorationUses[color]
+            }"
+            @click="players[currentPlayerIndex].decorationUses[color] && toggleTokenSelection(color)"
+          >
+            <div class="token-circle" :style="{ backgroundColor: 'var(--' + color.toLowerCase() + '-color)' }"></div>
+            <span>{{ color === 'R' ? '紅色' : color === 'G' ? '綠色' : '棕色' }}</span>
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button @click="showPaidMulliganModal = false" class="cancel-btn">取消</button>
+          <button 
+            @click="handlePaidMulligan" 
+            :disabled="selectedTokensForPaidMulligan.length !== 2"
+            class="confirm-btn"
+          >
+            確認重抽 ({{ selectedTokensForPaidMulligan.length }}/2)
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -620,5 +742,80 @@ onMounted(() => {
   align-items: center;
   border-radius: 20px;
   z-index: 100;
+}
+
+/* Paid Mulligan Modal Styles */
+.paid-mulligan-modal {
+  width: 90%;
+  max-width: 400px;
+}
+
+.token-selection-grid {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  margin: 25px 0;
+}
+
+.token-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 10px;
+  border-radius: 12px;
+  border: 2px solid transparent;
+  transition: all 0.2s;
+}
+
+.token-item.selected {
+  border-color: #e74c3c;
+  background: rgba(231, 76, 60, 0.1);
+}
+
+.token-item.disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  filter: grayscale(1);
+}
+
+.token-circle {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.modal-actions {
+  display: flex;
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.cancel-btn {
+  flex: 1;
+  background: #eee;
+  color: #666;
+  border: none;
+  padding: 12px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.confirm-btn {
+  flex: 2;
+  background: #e74c3c;
+  color: white;
+  border: none;
+  padding: 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.confirm-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
 }
 </style>

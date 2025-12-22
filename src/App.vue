@@ -11,7 +11,12 @@ const checkUrlParams = () => {
   const difficulty = params.get('difficulty');
   
   if (mode === 'ai' || mode === 'pvp') {
-    currentGame.value = { mode, difficulty: difficulty || 'normal' };
+    currentGame.value = { 
+      mode, 
+      difficulty: difficulty || 'normal',
+      randomBoard: params.get('randomBoard') === 'true',
+      paidMulligan: params.get('paidMulligan') === 'true'
+    };
   } else {
     currentGame.value = null;
   }
@@ -22,6 +27,12 @@ const handleStart = (settings) => {
   params.set('mode', settings.mode);
   if (settings.difficulty) {
     params.set('difficulty', settings.difficulty);
+  }
+  if (settings.randomBoard) {
+    params.set('randomBoard', 'true');
+  }
+  if (settings.paidMulligan) {
+    params.set('paidMulligan', 'true');
   }
   
   // 更新 URL 但不刷頁面
@@ -49,6 +60,8 @@ onMounted(() => {
       v-if="currentGame" 
       :mode="currentGame.mode" 
       :difficulty="currentGame.difficulty"
+      :random-board="currentGame.randomBoard"
+      :paid-mulligan="currentGame.paidMulligan"
       @back="handleBack"
     />
     <IntroView v-else @start="handleStart" />

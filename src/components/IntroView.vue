@@ -38,6 +38,11 @@ const translations = {
     enterGame: '線上試玩',
     startGame: '開始裝飾 🎄',
     nextStep: '下一步',
+    randomBoard: '初始隨機底版',
+    randomBoardDesc: '隨機打亂 3色各3個的初始底版位置',
+    paidMulligan: '啟用重抽效果',
+    paidMulliganDesc: '可消耗兩個精心裝飾指示物進行手牌重抽',
+    backToInfo: '← 返回規則',
     examplesTitle: '規則圖解 (範例)',
     legalMatchLabel: '合法：達成配對 ✅ 中間紅色框起來的是放下去的板塊，本來下面底版是咖啡色，蓋下去後和黃色框框的板塊拼成了自己中間的圖樣（三紅一綠的配對）',
     illegalColorLabel: '不合法：底色衝突 ❌ 右上角的飾物顏色是紅色，所以不能堆疊在底版上這些紅色板塊的地方，但假如之後被別的顏色覆蓋，就可以再放上去。',
@@ -99,6 +104,11 @@ const translations = {
     enterGame: 'Enter Game',
     startGame: 'Start 🎄',
     nextStep: 'Next',
+    randomBoard: 'Initial Random Board',
+    randomBoardDesc: 'Randomize the 9 base tiles (3 each of R/G/B)',
+    paidMulligan: 'Enable Paid Mulligan',
+    paidMulliganDesc: 'Spend 2 Exquisite Decoration tokens to redraw your hand',
+    backToInfo: '← Back to Rules',
     examplesTitle: 'Visual Examples',
     legalMatchLabel: 'Legal: Pattern Match ✅ The center red-framed tile is the one just placed. It was placed on a brown base, and combined with the tiles in the yellow frames to complete its own pattern (three reds and one green).',
     illegalColorLabel: 'Illegal: Color Clash ❌ The ornament color in the top right is red, so it cannot be placed on these red base tiles. However, if these cells are later covered by other colors, it can be placed there.',
@@ -147,6 +157,8 @@ const rules = computed(() => [
 const state = ref('info'); // info, select-mode, select-difficulty
 const selectedMode = ref('pvp');
 const selectedDifficulty = ref('normal');
+const randomInitialBoard = ref(false);
+const paidMulliganEnabled = ref(false);
 
 // Difficulty image mapping
 import noviceImg from '../assets/elves/novice.png';
@@ -167,9 +179,18 @@ const handleStartClick = () => {
   if (state.value === 'info') {
     state.value = 'select-mode';
   } else if (state.value === 'select-difficulty') {
-    emit('start', { mode: 'ai', difficulty: selectedDifficulty.value });
+    emit('start', { 
+      mode: 'ai', 
+      difficulty: selectedDifficulty.value,
+      randomBoard: randomInitialBoard.value,
+      paidMulligan: paidMulliganEnabled.value
+    });
   } else if (selectedMode.value === 'pvp') {
-    emit('start', { mode: 'pvp' });
+    emit('start', { 
+      mode: 'pvp',
+      randomBoard: randomInitialBoard.value,
+      paidMulligan: paidMulliganEnabled.value
+    });
   } else {
     state.value = 'select-difficulty';
   }
@@ -191,7 +212,7 @@ const handleStartClick = () => {
       >EN</button>
     </div>
 
-    <div class="intro-card">
+    <div class="intro-card" :class="{ 'selection-mode': state !== 'info' }">
       <div class="header-image">
         <img src="../assets/header.png" alt="Stack Christmas Header" />
         <div class="title-overlay">
@@ -344,7 +365,13 @@ const handleStartClick = () => {
 
         <template v-else-if="state === 'select-mode'">
           <div class="selection-view">
-            <h3>{{ t.selectMode }}</h3>
+            <div class="header-with-back">
+              <button class="back-link" @click="state = 'info'">{{ t.backToInfo }}</button>
+            </div>
+            <div class="header-with-back">
+              <h3>{{ t.selectMode }}</h3>
+            
+            </div>
             <div class="mode-options">
               <div 
                 class="option-card" 
@@ -362,6 +389,27 @@ const handleStartClick = () => {
                 <span class="icon">🤖</span>
                 <span class="label">{{ t.aiMode }}</span>
               </div>
+            </div>
+
+            <!-- New Options -->
+            <div class="extra-options">
+              <label class="custom-checkbox">
+                <input type="checkbox" v-model="randomInitialBoard">
+                <span class="checkmark"></span>
+                <div class="checkbox-text">
+                  <span class="main-label">{{ t.randomBoard }}</span>
+                  <span class="desc">{{ t.randomBoardDesc }}</span>
+                </div>
+              </label>
+              
+              <label class="custom-checkbox mt-15">
+                <input type="checkbox" v-model="paidMulliganEnabled">
+                <span class="checkmark"></span>
+                <div class="checkbox-text">
+                  <span class="main-label">{{ t.paidMulligan }}</span>
+                  <span class="desc">{{ t.paidMulliganDesc }}</span>
+                </div>
+              </label>
             </div>
           </div>
         </template>
@@ -426,11 +474,15 @@ const handleStartClick = () => {
   display: flex;
   flex-direction: column;
   box-shadow: 0 20px 60px rgba(0,0,0,0.6);
-  transition: max-width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.intro-card.selection-mode {
+  max-width: 800px; /* Match GameView width */
 }
 
 @media (min-width: 1100px) {
-  .intro-card {
+  .intro-card:not(.selection-mode) {
     max-width: 1260px;
   }
 }
@@ -957,6 +1009,84 @@ const handleStartClick = () => {
 
 .back-link:hover { color: #e74c3c; text-decoration: underline; }
 
+/* Extra Options & Checkbox */
+.extra-options {
+  margin-top: 10px;
+  background: white;
+  border: 1px solid #eee;
+  padding: 15px;
+  border-radius: 16px;
+  text-align: left;
+}
+
+.custom-checkbox {
+  display: flex;
+  align-items: center;
+  position: relative;
+  cursor: pointer;
+  user-select: none;
+  gap: 12px;
+}
+
+.custom-checkbox input {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+  height: 0;
+  width: 0;
+}
+
+.checkmark {
+  height: 24px;
+  width: 24px;
+  background-color: #eee;
+  border-radius: 6px;
+  position: relative;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+
+.custom-checkbox:hover input ~ .checkmark {
+  background-color: #ddd;
+}
+
+.custom-checkbox input:checked ~ .checkmark {
+  background-color: #e74c3c;
+}
+
+.checkmark:after {
+  content: "";
+  position: absolute;
+  display: none;
+  left: 8px;
+  top: 4px;
+  width: 5px;
+  height: 10px;
+  border: solid white;
+  border-width: 0 3px 3px 0;
+  transform: rotate(45deg);
+}
+
+.custom-checkbox input:checked ~ .checkmark:after {
+  display: block;
+}
+
+.checkbox-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.checkbox-text .main-label {
+  font-weight: 700;
+  color: #2c3e50;
+  font-size: 0.95rem;
+}
+
+.checkbox-text .desc {
+  font-size: 0.75rem;
+  color: #888;
+}
+
 /* Utils */
 .lang-switcher {
   position: absolute;
@@ -980,4 +1110,8 @@ const handleStartClick = () => {
 .content-scroll::-webkit-scrollbar { width: 6px; }
 .content-scroll::-webkit-scrollbar-track { background: transparent; }
 .content-scroll::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 10px; }
+
+.mt-15 {
+  margin-top: 15px;
+}
 </style>

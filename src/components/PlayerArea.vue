@@ -1,4 +1,5 @@
 <script setup>
+import { computed } from 'vue';
 import TileCard from './TileCard.vue';
 import { GameLogic } from '../logic/gameLogic';
 
@@ -9,6 +10,12 @@ import decoG1 from '../assets/deco_g1.png';
 import decoG2 from '../assets/deco_g2.png';
 import decoB1 from '../assets/deco_b1.png';
 import decoB2 from '../assets/deco_b2.png';
+
+// Import elf images for AI avatar
+import noviceImg from '../assets/elves/novice.png';
+import normalImg from '../assets/elves/normal.png';
+import hardImg from '../assets/elves/hard.png';
+import expertImg from '../assets/elves/expert.png';
 
 const decoImages = {
   'r1': decoR1,
@@ -24,6 +31,13 @@ const getDecoImage = (color, playerId) => {
   return decoImages[key];
 };
 
+const elfImages = {
+  beginner: noviceImg,
+  normal: normalImg,
+  hard: hardImg,
+  expert: expertImg
+};
+
 const props = defineProps([
   'player', 
   'isCurrent', 
@@ -33,19 +47,39 @@ const props = defineProps([
   'mulliganEnabled',
   'decoEnabled',
   'selectedDeco',
-  'canUndo'
+  'canUndo',
+  'paidMulliganEnabled',
+  'difficulty'
 ]);
 
-defineEmits(['selectTile', 'rotateTile', 'mulligan', 'selectDeco', 'undo']);
+const emit = defineEmits([
+  'selectTile', 
+  'rotateTile', 
+  'mulligan', 
+  'selectDeco', 
+  'undo',
+  'requestPaidMulligan'
+]);
+
+const availableTokensCount = computed(() => {
+  return Object.values(props.player.decorationUses).filter(u => u).length;
+});
 </script>
 
 <template>
   <div class="player-area" :class="{ 'is-rotated': isRotated, 'is-current': isCurrent }">
     <div class="header">
       <div class="player-info">
-        <span class="name">{{ player.name }}</span>
-        <div class="lucky-indicator" :class="'color-' + player.luckyColor?.toLowerCase()">
-          {{ player.luckyColor }}
+        <!-- AI Avatar -->
+        <div v-if="player.isAi" class="ai-avatar-box" :class="[difficulty, { 'rotated': isRotated }]">
+          <img :src="elfImages[difficulty] || normalImg" alt="Elf Avatar" />
+        </div>
+
+        <div class="player-ident">
+          <span class="name">{{ player.name }}</span>
+          <div class="lucky-indicator" :class="'color-' + player.luckyColor?.toLowerCase()">
+            {{ player.luckyColor }}
+          </div>
         </div>
       </div>
 
@@ -63,6 +97,17 @@ defineEmits(['selectTile', 'rotateTile', 'mulligan', 'selectDeco', 'undo']);
         >
           <img :src="getDecoImage(color, player.id)" :alt="color" />
         </div>
+
+        <!-- Paid Mulligan Button (Only for current human player) -->
+        <button 
+          v-if="paidMulliganEnabled && isCurrent && !player.isAi"
+          class="paid-mulligan-icon-btn"
+          :disabled="availableTokensCount < 2"
+          @click="$emit('requestPaidMulligan')"
+          title="消耗兩個指示物重抽"
+        >
+          ♻️
+        </button>
       </div>
 
       <span v-if="player.eliminated" class="eliminated">已淘汰</span>
@@ -132,7 +177,13 @@ defineEmits(['selectTile', 'rotateTile', 'mulligan', 'selectDeco', 'undo']);
 .player-info {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 15px;
+}
+
+.player-ident {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .lucky-indicator {
@@ -154,6 +205,48 @@ defineEmits(['selectTile', 'rotateTile', 'mulligan', 'selectDeco', 'undo']);
 
 .name { font-weight: bold; }
 .eliminated { color: var(--r-color); font-weight: bold; }
+
+.ai-avatar-box {
+  width: 60px;
+  height: 60px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(8px);
+  border-radius: 50%;
+  padding: 3px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border: 3px solid #bdc3c7;
+  z-index: 5;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  overflow: hidden;
+}
+
+.ai-avatar-box.beginner { border-color: #2ecc71; box-shadow: 0 0 10px rgba(46, 204, 113, 0.3); }
+.ai-avatar-box.normal { border-color: #3498db; box-shadow: 0 0 10px rgba(52, 152, 219, 0.3); }
+.ai-avatar-box.hard { border-color: #e67e22; box-shadow: 0 0 10px rgba(230, 126, 34, 0.3); }
+.ai-avatar-box.expert { border-color: #e74c3c; box-shadow: 0 0 15px rgba(231, 76, 60, 0.5); }
+
+.ai-avatar-box:hover {
+  transform: scale(1.15) translateY(-5px);
+  box-shadow: 0 15px 30px rgba(0,0,0,0.2);
+}
+
+.ai-avatar-box.rotated {
+  transform: rotate(180deg);
+}
+
+.ai-avatar-box.rotated:hover {
+  transform: rotate(180deg) scale(1.15) translateY(5px);
+}
+
+.ai-avatar-box img {
+  width: 90%;
+  height: 90%;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+}
 
 .hand {
   display: flex;
@@ -238,5 +331,34 @@ defineEmits(['selectTile', 'rotateTile', 'mulligan', 'selectDeco', 'undo']);
   width: 100%;
   height: 100%;
   object-fit: contain;
+}
+
+.paid-mulligan-icon-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid #e67e22;
+  background: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 0;
+  transition: all 0.2s;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  margin-left: 5px;
+}
+
+.paid-mulligan-icon-btn:hover:not(:disabled) {
+  background: #fff5e6;
+  transform: scale(1.1);
+}
+
+.paid-mulligan-icon-btn:disabled {
+  filter: grayscale(1);
+  opacity: 0.5;
+  cursor: not-allowed;
+  border-color: #ccc;
 }
 </style>
