@@ -281,7 +281,31 @@ async function handleAiTurn() {
             if (region) {
                 // Survival match achieved! Draw and end turn.
                 let drawCount = settings.value.flexibleDraw ? tilesPlayedThisTurn.value : 1;
+                
+                // AI Token / Lucky Color Logic
+                const decoEnabled = settings.value.exquisiteDecoration && settings.value.playerCount === 2;
+                if (decoEnabled) {
+                    // AI heuristic: use token if hand is low (1 card left) and token color matches tile
+                    if (player.hand.length <= 1 && player.decorationUses[tile.ornamentColor]) {
+                        if (player.hand.length + drawCount < handLimit.value) {
+                            player.decorationUses[tile.ornamentColor] = false;
+                            drawCount++;
+                        }
+                    }
+                } else if (settings.value.luckyColorEnabled && tile.ornamentColor === player.luckyColor) {
+                    drawCount++;
+                }
+
                 for (let i = 0; i < drawCount; i++) {
+                    if (deck.value.length === 0 && discardPile.value.length > 0) {
+                        deck.value = [...discardPile.value];
+                        discardPile.value = [];
+                        // Shuffle deck
+                        for (let j = deck.value.length - 1; j > 0; j--) {
+                            const k = Math.floor(Math.random() * (j + 1));
+                            [deck.value[j], deck.value[k]] = [deck.value[k], deck.value[j]];
+                        }
+                    }
                     if (deck.value.length > 0 && player.hand.length < handLimit.value) {
                         player.hand.push(deck.value.pop());
                     }

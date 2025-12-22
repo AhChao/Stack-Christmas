@@ -86,7 +86,10 @@ export class AiAgent {
         const legalMoves = this.getAllLegalMoves(board, hand);
         const successfulMoves = legalMoves.filter(m => m.hasMatch);
 
-        if(successfulMoves.length === 0) return null; // Eliminated
+        if(successfulMoves.length === 0) {
+            // Try searching for a 2-tile setup sequence
+            return this.findSetupMove(board, hand);
+        }
 
         const scoredMoves = successfulMoves.map(move => {
             let score = 100; // survival
@@ -142,12 +145,81 @@ export class AiAgent {
             return { ...move, score };
         });
 
-        if(scoredMoves.length === 0) return null;
+        if(scoredMoves.length === 0) {
+            // Try searching for a 2-tile setup sequence
+            return this.findSetupMove(board, hand);
+        }
         scoredMoves.sort((a, b) => b.score - a.score);
         return scoredMoves[0];
     }
 
     // --- Helper Methods ---
+
+    /**
+     * Find a "Setup" move when no immediate match is possible.
+     * Looks for a tile that completes a "near-match" for another tile in hand.
+     */
+    static findSetupMove(board, hand) {
+        if(hand.length < 2) return null;
+
+        for(let targetIdx = 0; targetIdx < hand.length; targetIdx++) {
+            const target = hand[targetIdx];
+            const othersIndices = hand.map((_, i) => i).filter(i => i !== targetIdx);
+
+            // Scan all 4 possible 2x2 regions
+            for(let r = 0; r <= 1; r++) {
+                for(let c = 0; c <= 1; c++) {
+                    for(let rot = 0; rot < 4; rot++) {
+                        const pattern = GameLogic.rotatePatternTimes(target.pattern, rot);
+                        const mismatches = [];
+
+                        for(let i = 0; i < 2; i++) {
+                            for(let j = 0; j < 2; j++) {
+                                if(board[r + i][c + j].color !== pattern[i][j]) {
+                                    mismatches.push({ row: r + i, col: c + j, neededColor: pattern[i][j] });
+                                }
+                            }
+                        }
+
+                        // We can handle N mismatches if we have at least N other cards to fix them
+                        if(mismatches.length > 0 && mismatches.length < hand.length) {
+                            let availableIndices = [...othersIndices];
+                            const setupSequence = [];
+                            let pathPossible = true;
+
+                            for(const m of mismatches) {
+                                const foundIdx = availableIndices.find(idx => {
+                                    const tile = hand[idx];
+                                    return tile.ornamentColor === m.neededColor && board[m.row][m.col].color !== tile.ornamentColor;
+                                });
+
+                                if(foundIdx !== undefined) {
+                                    setupSequence.push({
+                                        tileIndex: foundIdx,
+                                        row: m.row,
+                                        col: m.col,
+                                        rotation: 0,
+                                        tile: hand[foundIdx],
+                                        isSetup: true
+                                    });
+                                    availableIndices = availableIndices.filter(i => i !== foundIdx);
+                                } else {
+                                    pathPossible = false;
+                                    break;
+                                }
+                            }
+
+                            if(pathPossible && setupSequence.length > 0) {
+                                // Return the first move in the planned setup sequence
+                                return setupSequence[0];
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return null;
+    }
 
     static getAllLegalMoves(board, hand) {
         const moves = [];
