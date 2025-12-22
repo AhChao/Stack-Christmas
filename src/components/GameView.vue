@@ -285,8 +285,8 @@ async function handleAiTurn() {
                 // AI Token / Lucky Color Logic
                 const decoEnabled = settings.value.exquisiteDecoration && settings.value.playerCount === 2;
                 if (decoEnabled) {
-                    // AI heuristic: use token if hand is low (1 card left) and token color matches tile
-                    if (player.hand.length <= 1 && player.decorationUses[tile.ornamentColor]) {
+                    // AI heuristic: use token whenever it won't exceed hand limit and token color matches tile
+                    if (player.decorationUses[tile.ornamentColor]) {
                         if (player.hand.length + drawCount < handLimit.value) {
                             player.decorationUses[tile.ornamentColor] = false;
                             drawCount++;
