@@ -2,6 +2,28 @@
 import TileCard from './TileCard.vue';
 import { GameLogic } from '../logic/gameLogic';
 
+// Import decoration images explicitly for Vite
+import decoR1 from '../assets/deco_r1.png';
+import decoR2 from '../assets/deco_r2.png';
+import decoG1 from '../assets/deco_g1.png';
+import decoG2 from '../assets/deco_g2.png';
+import decoB1 from '../assets/deco_b1.png';
+import decoB2 from '../assets/deco_b2.png';
+
+const decoImages = {
+  'r1': decoR1,
+  'r2': decoR2,
+  'g1': decoG1,
+  'g2': decoG2,
+  'b1': decoB1,
+  'b2': decoB2
+};
+
+const getDecoImage = (color, playerId) => {
+  const key = `${color.toLowerCase()}${playerId}`;
+  return decoImages[key];
+};
+
 const props = defineProps([
   'player', 
   'isCurrent', 
@@ -39,7 +61,7 @@ defineEmits(['selectTile', 'rotateTile', 'mulligan', 'selectDeco', 'undo']);
           }"
           @click="player.decorationUses[color] && $emit('selectDeco', selectedDeco === color ? null : color)"
         >
-          <img :src="`./src/assets/deco_${color.toLowerCase()}${player.id}.png`" :alt="color" />
+          <img :src="getDecoImage(color, player.id)" :alt="color" />
         </div>
       </div>
 
