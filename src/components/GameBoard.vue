@@ -35,8 +35,8 @@ const isInvalid = (color) => {
         ></div>
 
         <div class="cell-inner">
-          <!-- 核心圖樣 (僅在有 pattern 時顯示) -->
-          <div v-if="cell.pattern" class="board-pattern-grid" :style="{ transform: `rotate(${cell.rotation * 90}deg)` }">
+          <!-- 核心圖樣 (僅在有 pattern 且沒有星星時顯示) -->
+          <div v-if="cell.pattern && !(r === 1 && c === 1 && hasStar)" class="board-pattern-grid" :style="{ transform: `rotate(${cell.rotation * 90}deg)` }">
             <template v-for="(pRow, pr) in cell.pattern" :key="pr">
               <div 
                 v-for="(pColor, pc) in pRow" 
@@ -152,6 +152,7 @@ const isInvalid = (color) => {
 }
 
 .star-top {
+  position: absolute;
   width: 90%;
   height: 90%;
   filter: drop-shadow(0 0 10px gold);
