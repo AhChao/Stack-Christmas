@@ -66,46 +66,24 @@ const isInvalid = (color) => {
 <style scoped>
 .board {
   display: grid;
+  grid-template-columns: repeat(3, 1fr);
   grid-template-rows: repeat(3, 1fr);
-  gap: 8px;
-  /* background: #bdc3c7; */
+  width: 55.4%;
+  height: 55.4%;
+  gap: 2.2%;
+  padding: 2.3%;
+  box-sizing: border-box;
   background: transparent;
-  padding: 8px;
-  border-radius: 12px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-  position: relative; /* For the pot positioning */
-  margin-bottom: 40px; /* Space for the pot that sticks out */
-}
-
-.tree-pot-container {
-  position: absolute;
-  bottom: -45px; /* Positioned below the board */
-  left: 50%;
-  transform: translateX(-50%);
-  width: 100px;
-  height: 60px;
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  z-index: 0;
-}
-
-.tree-pot {
-  width: 100%;
-  height: auto;
-  object-fit: contain;
-  filter: drop-shadow(0 4px 10px rgba(0,0,0,0.2));
+  position: relative;
 }
 
 .row {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
+  display: contents;
 }
 
 .cell {
-  width: 80px;
-  height: 80px;
+  width: 100%;
+  height: 100%;
   border-radius: 8px;
   display: flex;
   justify-content: center;
@@ -196,8 +174,8 @@ const isInvalid = (color) => {
   grid-template-columns: repeat(2, 1fr);
   grid-template-rows: repeat(2, 1fr);
   gap: 2px;
-  width: 50px;
-  height: 50px;
+  width: 65%;
+  height: 65%;
   background: white;
   padding: 2px;
   border-radius: 4px;

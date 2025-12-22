@@ -440,21 +440,29 @@ onMounted(() => {
 }
 
 .middle-area {
-  flex: 1;
   display: flex;
   justify-content: center;
   align-items: center;
-
-    width: 500px;
-    height: 500px;
-    background: url("/src/assets/pot.png");
-    background-size: 700px 700px;
-    background-position: -101px -105px;
-    margin-left: 8%;
+  aspect-ratio: 1 / 1;
+  width: 90vmin;
+  height: 90vmin;
+  max-width: 500px;
+  max-height: 500px;
+  background: url("/src/assets/pot.png");
+  background-size: 140%;
+  background-position: center;
+  background-repeat: no-repeat;
+  margin: 0 auto;
+  position: relative;
 
 }
 
 .board-wrapper {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   position: relative;
 }
 
