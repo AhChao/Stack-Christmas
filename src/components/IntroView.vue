@@ -21,12 +21,15 @@ const translations = {
     tags: ['板塊拼放', '手牌管理', '抽象策略'],
     goalsTitle: '遊戲目標',
     goalsContent: '輪流在 3x3 的聖誕樹盤面上放置掛飾板塊，完成圖樣搭配。當手牌用完仍然無法完成裝飾的人就被淘汰。誰能穩穩地把樹裝得最完整，就能來為我們的聖誕樹掛上樹頂的星星喔！',
-    prepTitle: '遊戲準備',
-    prepContent: '隨機配置聖誕樹盤面，每人拿取紅、綠、棕三色「精心裝飾指示物」各一枚。每人抽取 3 張初始板塊並公開。若其中一人起手皆為同色重新發牌。',
     turnTitle: '輪到你時',
     turnContent: '從手牌選一張板塊放到盤面上（不能放在底色與裝飾顏色相同的格子上）。放下去的板塊必須和另外三個板塊組成自己的圖樣才算配對成功，只看最後放下去的板塊及它上面的圖樣。每回合必須完成至少一個配對，否則遊戲結束。',
     winTitle: '補牌與勝利',
     winContent: '完成配對後，抽取一張。此時可選擇消耗對應顏色的「精心裝飾指示物」額外多補一張板塊。當有人手牌耗盡且無法配對時遊戲結束，最後完成配對者獲勝！',
+    prepTitle: '遊戲準備',
+    prepStepBoard: '1. 底版鋪設',
+    prepStepBoardDesc: '先把聖誕樹底版放在兩個人中間，然後找那九張純色底版（上面沒有圖樣的），隨機抽一張放在中間，然後按照這張圖上對應的內容把剩下八格排完。',
+    prepStepHand: '2. 分發初始飾物板塊',
+    prepStepHandDesc: '隨機配置聖誕樹盤面，每人拿取紅、綠、棕三色「精心裝飾指示物」各一枚。每人抽取 3 張初始板塊並公開。',
     selectMode: '選擇遊戲模式',
     pvpMode: '雙人對戰',
     aiMode: '挑戰 AI',
@@ -78,11 +81,15 @@ const translations = {
     tags: ['Tile Placement', 'Hand Management', 'Abstract Strategy'],
     goalsTitle: 'Objective',
     goalsContent: 'Take turns placing ornament tiles on a 3x3 tree board to complete patterns. Players are eliminated if they cannot make a match on their turn. The last player remaining wins the honor of placing the star on top of the tree!',
-    prepContent: 'Set up the 3x3 board randomly. Each player receives three "Exquisite Decoration" tokens (Red, Green, and Brown) and 3 starting tiles. If EITHER player\'s starting hand consists of tiles all of the same color, reshuffle and redraw.',
+    winContent: 'After making a match, draw ONE tile. You may then choose to spend a matching "Exquisite Decoration" token to draw one additional tile. The game ends when a player ran out of cards and cannot make a move; the last person to complete a match wins!',
+    prepTitle: 'Preparation',
+    prepStepBoard: '1. Board Setup',
+    prepStepBoardDesc: 'Place the tree board between players. Find the 9 solid base tiles (no patterns), randomly place one in the center, and arrange the other 8 according to the setup map.',
+    prepStepHand: '2. Initial Hand Distribution',
+    prepStepHandDesc: 'Each player receives three "Exquisite Decoration" tokens (Red, Green, and Brown) and 3 starting tiles. If EITHER player\'s starting hand consists of tiles all of the same color, reshuffle and redraw.',
     turnTitle: 'On Your Turn',
     turnContent: 'Select a tile from your hand and place it on the board (it cannot be placed on a cell where the background color matches the tile\'s ornament color). A match counts ONLY if the tile YOU place completes a 2x2 pattern with three other tiles. Only the final tile placed and its pattern determine the match. You must achieve at least one match per turn to stay in the game.',
     winTitle: 'Drawing & Victory',
-    winContent: 'After making a match, draw ONE tile. You may then choose to spend a matching "Exquisite Decoration" token to draw one additional tile. The game ends when a player ran out of cards and cannot make a move; the last person to complete a match wins!',
     selectMode: 'Select Mode',
     pvpMode: 'PvP Mode',
     aiMode: 'Challenge AI',
@@ -132,10 +139,7 @@ const gameInfo = computed(() => ({
 }));
 
 const rules = computed(() => [
-  { title: t.value.goalsTitle, content: t.value.goalsContent },
-  { title: t.value.prepTitle, content: t.value.prepContent },
-  { title: t.value.turnTitle, content: t.value.turnContent },
-  { title: t.value.winTitle, content: t.value.winContent }
+  { title: t.value.goalsTitle, content: t.value.goalsContent }
 ]);
 
 const state = ref('info'); // info, select-mode, select-difficulty
@@ -184,104 +188,135 @@ const handleStartClick = () => {
 
       <div class="content-scroll">
         <template v-if="state === 'info'">
-          <div class="info-grid">
-            <div class="info-item">
-              <span class="label">{{ t.designer }}</span>
-              <span class="value">{{ gameInfo.designer }}</span>
-            </div>
-            <div class="info-item">
-              <span class="label">{{ t.players }}</span>
-              <span class="value">{{ gameInfo.players }}</span>
-            </div>
-            <div class="info-item">
-              <span class="label">{{ t.age }}</span>
-              <span class="value">{{ gameInfo.age }}</span>
-            </div>
-            <div class="info-item">
-              <span class="label">{{ t.time }}</span>
-              <span class="value">{{ gameInfo.time }}</span>
-            </div>
-          </div>
-          
-          <div class="components-section">
-            <h2 class="section-title">{{ t.componentsTitle }}</h2>
-            <div class="components-grid">
-              <div class="component-card">
-                <img src="../assets/components/board_preview.png" alt="Board" />
-                <div class="comp-info">
-                  <h4>{{ t.components.board.name }}</h4>
-                  <p>{{ t.components.board.desc }}</p>
+          <div class="pages-container">
+            <!-- Page 1: Overview & Setup -->
+            <div class="rule-page page-1">
+              <div class="info-grid">
+                <div class="info-item">
+                  <span class="label">{{ t.designer }}</span>
+                  <span class="value">{{ gameInfo.designer }}</span>
+                </div>
+                <div class="info-item">
+                  <span class="label">{{ t.players }}</span>
+                  <span class="value">{{ gameInfo.players }}</span>
+                </div>
+                <div class="info-item">
+                  <span class="label">{{ t.age }}</span>
+                  <span class="value">{{ gameInfo.age }}</span>
+                </div>
+                <div class="info-item">
+                  <span class="label">{{ t.time }}</span>
+                  <span class="value">{{ gameInfo.time }}</span>
                 </div>
               </div>
-              <div class="component-card">
-                <img src="../assets/components/tile_preview.png" alt="Tiles" />
-                <div class="comp-info">
-                  <h4>{{ t.components.tiles.name }}</h4>
-                  <p>{{ t.components.tiles.desc }}</p>
+
+              <div class="rule-section intro-section">
+                <h2 class="section-header">✨ {{ t.goalsTitle }}</h2>
+                <div class="section-card goal-card">
+                  <p>{{ t.goalsContent }}</p>
                 </div>
               </div>
-              <div class="component-card">
-                <img src="../assets/components/token_preview.png" alt="Tokens" />
-                <div class="comp-info">
-                  <h4>{{ t.components.tokens.name }}</h4>
-                  <p>{{ t.components.tokens.desc }}</p>
+
+              <div class="rule-section components-section">
+                <h2 class="section-header">📦 {{ t.componentsTitle }}</h2>
+                <div class="components-grid">
+                  <div class="component-card">
+                    <img src="../assets/components/board_preview.png" alt="Board" />
+                    <div class="comp-info">
+                      <h4>{{ t.components.board.name }}</h4>
+                      <p>{{ t.components.board.desc }}</p>
+                    </div>
+                  </div>
+                  <div class="component-card">
+                    <img src="../assets/components/tile_preview.png" alt="Tiles" />
+                    <div class="comp-info">
+                      <h4>{{ t.components.tiles.name }}</h4>
+                      <p>{{ t.components.tiles.desc }}</p>
+                    </div>
+                  </div>
+                  <div class="component-card">
+                    <img src="../assets/components/token_preview.png" alt="Tokens" />
+                    <div class="comp-info">
+                      <h4>{{ t.components.tokens.name }}</h4>
+                      <p>{{ t.components.tokens.desc }}</p>
+                    </div>
+                  </div>
+                  <div class="component-card">
+                    <img src="../assets/components/star_preview.png" alt="Star" />
+                    <div class="comp-info">
+                      <h4>{{ t.components.star.name }}</h4>
+                      <p>{{ t.components.star.desc }}</p>
+                    </div>
+                  </div>
                 </div>
               </div>
-              <div class="component-card">
-                <img src="../assets/components/star_preview.png" alt="Star" />
-                <div class="comp-info">
-                  <h4>{{ t.components.star.name }}</h4>
-                  <p>{{ t.components.star.desc }}</p>
+
+              <div class="rule-section setup-section">
+                <h2 class="section-header">🛠️ {{ t.prepTitle }}</h2>
+                <div class="prep-flow">
+                  <div class="prep-step">
+                    <h4 class="step-title">📍 {{ t.prepStepBoard }}</h4>
+                    <div class="section-card setup-card">
+                      <img src="../assets/setup.png" alt="Setup" />
+                      <p>{{ t.prepStepBoardDesc }}</p>
+                    </div>
+                  </div>
+                  <div class="prep-step">
+                    <h4 class="step-title">🃏 {{ t.prepStepHand }}</h4>
+                    <div class="section-card prep-card">
+                      <p class="step-text">{{ t.prepStepHandDesc }}</p>
+                      <div class="reshuffle-box">
+                        <img src="../assets/reshuffle-case.png" :alt="t.reshuffleLabel" />
+                        <p class="caption">⚠️ {{ t.reshuffleLabel }}</p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          <div class="setup-section">
-            <h2 class="section-title">{{ t.setupTitle }}</h2>
-            <div class="setup-card">
-              <img src="../assets/setup.png" alt="Setup" />
-              <p>{{ t.setupContent }}</p>
-            </div>
-          </div>
+            <!-- Page 2: Gameplay & Reference -->
+            <div class="rule-page page-2">
+              <div class="rule-section play-section">
+                <h2 class="section-header">🎯 {{ t.turnTitle }}</h2>
+                <div class="section-card main-rule-card">
+                  <p class="rule-text">{{ t.turnContent }}</p>
+                  
+                  <div class="inline-examples">
+                    <div class="example-item">
+                      <img src="../assets/rules/legal_match.png" :alt="t.legalMatchLabel" />
+                      <p>{{ t.legalMatchLabel }}</p>
+                    </div>
+                    <div class="example-item">
+                      <img src="../assets/rules/illegal_color.png" :alt="t.illegalColorLabel" />
+                      <p>{{ t.illegalColorLabel }}</p>
+                    </div>
+                    <div class="example-item">
+                      <img src="../assets/rules/illegal_no_match.png" :alt="t.noMatchLabel" />
+                      <p>{{ t.noMatchLabel }}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
 
-          <div class="rules-section">
-            <div v-for="(rule, index) in rules" :key="index" class="rule-block">
-              <h3>{{ rule.title }}</h3>
-              <p>{{ rule.content }}</p>
-            </div>
-          </div>
+              <div class="rule-section win-section">
+                <h2 class="section-header">🏆 {{ t.winTitle }}</h2>
+                <div class="section-card win-card">
+                  <p>{{ t.winContent }}</p>
+                </div>
+              </div>
 
-          <!-- Visual Examples -->
-          <div class="examples-section">
-            <h2 class="section-title">{{ t.examplesTitle }}</h2>
-            <div class="examples-grid">
-              <div class="example-item">
-                <img src="../assets/rules/legal_match.png" :alt="t.legalMatchLabel" />
-                <span>{{ t.legalMatchLabel }}</span>
-              </div>
-              <div class="example-item">
-                <img src="../assets/rules/illegal_color.png" :alt="t.illegalColorLabel" />
-                <span>{{ t.illegalColorLabel }}</span>
-              </div>
-              <div class="example-item">
-                <img src="../assets/rules/illegal_no_match.png" :alt="t.noMatchLabel" />
-                <span>{{ t.noMatchLabel }}</span>
-              </div>
-              <div class="example-item">
-                <img src="../assets/reshuffle-case.png" :alt="t.reshuffleLabel" />
-                <span>{{ t.reshuffleLabel }}</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="advanced-section">
-            <h2 class="section-title">{{ t.advancedTitle }}</h2>
-            <p class="section-intro">{{ t.advancedIntro }}</p>
-            <div class="variants-grid">
-              <div v-for="(v, idx) in t.variants" :key="idx" class="variant-card">
-                <h4>{{ v.title }}</h4>
-                <p>{{ v.desc }}</p>
+              <div class="rule-section advanced-section">
+                <h2 class="section-header">🔥 {{ t.advancedTitle }}</h2>
+                <div class="section-card advanced-card">
+                  <p class="section-intro">{{ t.advancedIntro }}</p>
+                  <div class="variants-grid">
+                    <div v-for="(v, idx) in t.variants" :key="idx" class="variant-item">
+                      <h4>{{ v.title }}</h4>
+                      <p>{{ v.desc }}</p>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -345,72 +380,37 @@ const handleStartClick = () => {
 </template>
 
 <style scoped>
+/* --- Design Tokens & Base --- */
 .intro-container {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(135deg, #1a472a 0%, #0d2b18 100%);
+  height: 100vh;
   display: flex;
+  align-items: center;
   justify-content: center;
-  align-items: center;
   padding: 20px;
-  z-index: 10000;
+  background: linear-gradient(135deg, #1a472a 0%, #0d2516 100%);
   font-family: 'Inter', sans-serif;
-}
-
-.lang-switcher {
-  position: absolute;
-  top: 30px;
-  right: 30px;
-  background: rgba(255,255,255,0.1);
-  backdrop-filter: blur(10px);
-  padding: 8px 16px;
-  border-radius: 50px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: white;
-  font-size: 0.85rem;
-  z-index: 10001;
-  border: 1px solid rgba(255,255,255,0.2);
-}
-
-.lang-switcher button {
-  background: none;
-  border: none;
-  color: rgba(255,255,255,0.6);
-  cursor: pointer;
-  font-weight: 700;
-  transition: color 0.2s;
-  padding: 0;
-}
-
-.lang-switcher button.active {
-  color: white;
-}
-
-.lang-switcher button:hover {
-  color: white;
-}
-
-.lang-switcher .sep {
-  opacity: 0.3;
 }
 
 .intro-card {
   background: white;
-  width: 100%;
+  width: 95%;
   max-width: 500px;
-  max-height: 90vh;
+  max-height: 95vh;
   border-radius: 24px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+  transition: max-width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+@media (min-width: 1100px) {
+  .intro-card {
+    max-width: 1260px;
+  }
+}
+
+/* Header & Meta */
 .header-image {
   position: relative;
   height: 200px;
@@ -425,10 +425,11 @@ const handleStartClick = () => {
 
 .title-overlay {
   position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+  inset: 0;
+  background: linear-gradient(to bottom, transparent, rgba(0,0,0,0.8));
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
   padding: 20px;
   color: white;
   text-align: center;
@@ -436,51 +437,129 @@ const handleStartClick = () => {
 
 .title-overlay h1 {
   margin: 0;
-  font-size: 2.5rem;
-  letter-spacing: 2px;
-  text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  font-size: 2.2rem;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.5);
 }
 
 .subtitle {
   margin: 5px 0 10px;
-  font-size: 1rem;
   opacity: 0.9;
-  letter-spacing: 1px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  font-size: 0.9rem;
 }
 
 .badge-row {
   display: flex;
   justify-content: center;
-  gap: 8px;
-  margin-top: 10px;
+  gap: 10px;
 }
 
 .badge {
   background: rgba(255,255,255,0.2);
-  border: 1px solid rgba(255,255,255,0.3);
   padding: 4px 12px;
-  border-radius: 50px;
+  border-radius: 20px;
   font-size: 0.75rem;
-  font-weight: 500;
-  color: white;
-  backdrop-filter: blur(4px);
+  backdrop-filter: blur(5px);
+  border: 1px solid rgba(255,255,255,0.3);
 }
 
 .content-scroll {
   flex: 1;
   overflow-y: auto;
-  padding: 20px;
-  background: #fdfdfd;
+  padding: 25px;
+  background: #f0f4f0;
 }
 
-.info-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
+/* Page Structure */
+.pages-container {
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+}
+
+.rule-page {
+  background: white;
+  padding: 30px;
+  border-radius: 20px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 35px;
+}
+
+@media (min-width: 1100px) {
+  .pages-container {
+    flex-direction: row;
+    gap: 25px;
+    align-items: flex-start;
+  }
+
+  .rule-page {
+    flex: 1;
+    min-width: 0;
+    min-height: 820px;
+  }
+}
+
+/* Unified Section Components */
+.rule-section {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.section-header {
+  font-size: 1.2rem;
+  color: #1a472a;
+  margin: 0;
+  display: flex;
+  align-items: center;
   gap: 10px;
-  margin-bottom: 25px;
-  background: #f5f6f7;
-  padding: 15px;
+  border-left: 4px solid #1a472a;
+  padding-left: 12px;
+  text-align: left;
+}
+
+.section-card {
+  background: #fff;
+  border: 1px solid #eee;
   border-radius: 16px;
+  padding: 20px;
+  transition: all 0.2s;
+}
+
+.section-card p {
+  margin: 0;
+  line-height: 1.7;
+  color: #333;
+}
+
+/* Specific Variations */
+.goal-card {
+  background: #fffafa;
+  border-color: #ffeded;
+}
+
+.main-rule-card {
+  background: #f8fbf8;
+  border-color: #e8f0e8;
+}
+
+.setup-card, .prep-card, .win-card, .advanced-card {
+  background: #fafafa;
+}
+
+/* Key Metrics Grid */
+.info-grid {
+  display: flex;
+  justify-content: space-between;
+  gap: 15px;
+  padding: 15px 25px;
+  background: #f8fbf8;
+  border: 1px solid #e8f0e8;
+  border-radius: 12px;
+  margin-bottom: 5px;
 }
 
 .info-item {
@@ -491,355 +570,271 @@ const handleStartClick = () => {
 }
 
 .info-item .label {
-  font-size: 0.75rem;
-  color: #666;
-  margin-bottom: 4px;
+  font-size: 0.65rem;
+  color: #777;
+  text-transform: uppercase;
 }
 
 .info-item .value {
+  font-size: 0.85rem;
   font-weight: 700;
   color: #1a472a;
-  font-size: 0.9rem;
 }
 
-.components-section {
-  margin-top: 30px;
-  padding-bottom: 25px;
-  border-bottom: 2px dashed #eee;
-}
-
+/* Components Inventory */
 .components-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+@media (min-width: 480px) {
+  .components-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 .component-card {
   display: flex;
-  align-items: center;
-  gap: 15px;
+  gap: 12px;
   padding: 12px;
-  background: rgba(255, 255, 255, 0.5);
-  border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.8);
+  background: #fff;
+  border: 1px solid #f0f0f0;
+  border-radius: 12px;
 }
 
 .component-card img {
-  width: 70px;
-  height: 70px;
-  object-fit: contain;
-  border-radius: 10px;
-  background: white;
-  padding: 6px;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+  width: 50px;
+  height: 50px;
+  border-radius: 8px;
+  object-fit: cover;
 }
 
 .comp-info h4 {
-  margin: 0 0 4px 0;
-  font-size: 0.95rem;
+  margin: 0 0 2px;
+  font-size: 0.9rem;
   color: #1a472a;
 }
 
 .comp-info p {
   margin: 0;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   color: #666;
-  line-height: 1.5;
+  line-height: 1.4;
 }
 
-.setup-section {
-  margin-top: 30px;
-  margin-bottom: 30px;
-  padding-bottom: 25px;
-  border-bottom: 2px dashed #eee;
+/* Step-by-Step Prep */
+.prep-flow {
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
 }
 
-.setup-card {
-  background: white;
-  border-radius: 16px;
-  padding: 15px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-  border: 1px solid #f0f0f0;
+.step-title {
+  font-size: 1rem;
+  color: #2c3e50;
+  margin: 0 0 10px;
+  font-weight: 700;
 }
 
 .setup-card img {
   width: 100%;
-  border-radius: 8px;
+  border-radius: 10px;
   margin-bottom: 15px;
   border: 1px solid #ddd;
 }
 
-.setup-card p {
-  margin: 0;
-  font-size: 0.95rem;
-  line-height: 1.6;
-  color: #444;
-}
-
-.rules-section {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.rule-block h3 {
-  margin: 0 0 8px;
-  color: #e74c3c;
-  font-size: 1.1rem;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.rule-block h3::before {
-  content: '✦';
-  font-size: 0.8rem;
-}
-
-.rule-block p {
-  margin: 0;
-  font-size: 0.95rem;
-  line-height: 1.6;
-  color: #444;
-}
-
-.advanced-section {
-  margin-top: 40px;
-  margin-bottom: 30px;
-  padding-top: 30px;
-  border-top: 2px dashed #eee;
-}
-
-.section-intro {
-  text-align: center;
-  font-size: 0.9rem;
-  color: #666;
-  margin-bottom: 20px;
-  line-height: 1.5;
-}
-
-.variants-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-}
-
-.variant-card {
-  background: #fff5f5;
-  border-left: 4px solid #e74c3c;
+.reshuffle-box {
+  margin-top: 15px;
+  background: #fff8e1;
+  border: 1px solid #ffe082;
+  border-radius: 12px;
   padding: 15px;
-  border-radius: 0 12px 12px 0;
 }
 
-.variant-card h4 {
-  margin: 0 0 8px;
-  color: #c0392b;
-  font-size: 1rem;
+.reshuffle-box img {
+  width: 100%;
+  border-radius: 8px;
+  margin-bottom: 10px;
 }
 
-.variant-card p {
-  margin: 0;
+.reshuffle-box .caption {
   font-size: 0.85rem;
-  line-height: 1.5;
-  color: #555;
+  color: #795548;
+  font-weight: 500;
+  margin: 0;
 }
 
-.examples-section {
-  margin-top: 30px;
-  padding-top: 20px;
-  border-top: 2px dashed #eee;
+/* Interactive Rules */
+.rule-text {
+  font-size: 1rem;
+  line-height: 1.7;
+  margin-bottom: 25px !important;
+  font-weight: 500;
 }
 
-.section-title {
-  font-size: 1.2rem;
-  color: #1a472a;
-  margin-bottom: 20px;
-  text-align: center;
-}
-
-.examples-grid {
-  display: grid;
-  grid-template-columns: repeat(1, 1fr);
+.inline-examples {
+  display: flex;
+  flex-direction: column;
   gap: 20px;
 }
 
 .example-item {
   background: white;
-  border-radius: 16px;
-  padding: 15px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-  border: 1px solid #f0f0f0;
+  border: 1px solid #eee;
+  padding: 12px;
+  border-radius: 10px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.02);
 }
 
 .example-item img {
   width: 100%;
-  max-width: 240px;
   border-radius: 8px;
-  border: 1px solid #ddd;
+  margin-bottom: 10px;
 }
 
-.example-item span {
+.example-item p {
+  font-size: 0.85rem;
+  color: #555 !important;
+  line-height: 1.5;
+}
+
+/* Variant Styling */
+.variants-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-top: 15px;
+}
+
+.variant-item {
+  border-left: 3px solid #c0392b;
+  padding-left: 15px;
+}
+
+.variant-item h4 {
+  margin: 0 0 5px;
+  color: #c0392b;
+  font-size: 1rem;
+}
+
+.variant-item p {
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.section-intro {
   font-size: 0.9rem;
-  font-weight: 700;
-  color: #333;
+  color: #666;
+  font-style: italic;
+  margin-bottom: 5px;
 }
 
-@media (min-width: 400px) {
-  .examples-grid {
-    grid-template-columns: repeat(1, 1fr);
-  }
-}
-
+/* Footer & Actions */
 .footer-actions {
   padding: 20px;
   background: white;
   border-top: 1px solid #eee;
   display: flex;
-  justify-content: center;
-  gap: 16px;
-  align-items: center;
+  gap: 15px;
 }
 
 .start-btn {
+  flex: 2;
   background: #e74c3c;
   color: white;
   border: none;
-  padding: 16px 40px;
-  font-size: 1.25rem;
+  padding: 16px;
+  border-radius: 14px;
+  font-size: 1.1rem;
   font-weight: 700;
-  border-radius: 50px;
   cursor: pointer;
-  transition: transform 0.2s, background 0.2s;
-  box-shadow: 0 8px 20px rgba(231, 76, 60, 0.3);
+  transition: all 0.2s;
+  box-shadow: 0 4px 15px rgba(231, 76, 60, 0.3);
 }
 
 .start-btn:hover {
-  background: #c0392b;
   transform: translateY(-2px);
-}
-
-.start-btn:active {
-  transform: translateY(0);
+  background: #c0392b;
+  box-shadow: 0 6px 20px rgba(231, 76, 60, 0.4);
 }
 
 .pnp-btn {
+  flex: 1;
   background: white;
   color: #1a472a;
   border: 2px solid #1a472a;
-  padding: 12px 24px;
+  padding: 16px;
+  border-radius: 14px;
   font-size: 1rem;
   font-weight: 700;
-  border-radius: 50px;
-  cursor: pointer;
-  transition: all 0.2s;
-  text-decoration: none;
   display: flex;
   align-items: center;
-  gap: 8px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  justify-content: center;
+  text-decoration: none;
+  transition: all 0.2s;
 }
 
-.pnp-btn:hover {
-  background: #f5f6f7;
-  transform: translateY(-2px);
-  box-shadow: 0 6px 15px rgba(0,0,0,0.1);
-}
+.pnp-btn:hover { background: #f0f7f2; }
 
-.pnp-btn:active {
-  transform: translateY(0);
-}
-
-/* Selection Views */
+/* Selection View Styles */
 .selection-view {
+  padding: 10px;
   display: flex;
   flex-direction: column;
   gap: 20px;
   text-align: center;
 }
 
-.selection-view h3 {
-  margin: 0;
-  color: #1a472a;
-  font-size: 1.25rem;
-}
+.selection-view h3 { color: #1a472a; margin: 0; }
 
-.mode-options {
-  display: flex;
+.mode-options, .difficulty-options {
+  display: grid;
+  grid-template-columns: 1fr;
   gap: 15px;
 }
 
+@media (min-width: 480px) {
+  .mode-options, .difficulty-options { grid-template-columns: repeat(2, 1fr); }
+}
+
 .option-card {
-  flex: 1;
-  background: #f5f6f7;
-  padding: 30px 20px;
+  background: #f9f9f9;
+  border: 2px solid #eee;
+  padding: 25px;
   border-radius: 20px;
   cursor: pointer;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   transition: all 0.2s;
-  border: 3px solid transparent;
 }
 
-.option-card .icon {
-  font-size: 2.5rem;
-}
+.option-card:hover { border-color: #1a472a; }
+.option-card.active { border-color: #e74c3c; background: #fff; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
 
-.option-card .label {
-  font-weight: 700;
-  color: #333;
-}
-
-.option-card:hover {
-  transform: translateY(-4px);
-  background: #fff;
-  box-shadow: 0 10px 20px rgba(0,0,0,0.05);
-}
-
-.option-card.active {
-  background: white;
-  border-color: #e74c3c;
-  box-shadow: 0 10px 20px rgba(231, 76, 60, 0.1);
-}
-
-.difficulty-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
-}
+.option-card .icon { font-size: 2.2rem; }
+.option-card .label { font-weight: 700; }
 
 .diff-card {
-  background: #f5f6f7;
-  padding: 20px 10px;
+  background: #f9f9f9;
+  border: 2px solid #eee;
+  padding: 18px;
   border-radius: 16px;
-  cursor: pointer;
   font-weight: 700;
+  cursor: pointer;
   transition: all 0.2s;
-  border: 2px solid transparent;
 }
 
-.diff-card:hover {
-  background: #fff;
-  transform: scale(1.02);
-}
-
-.diff-card.active {
-  background: white;
-  border-color: #e74c3c;
-  color: #e74c3c;
-}
+.diff-card:hover { border-color: #1a472a; }
+.diff-card.active { background: white; border-color: #e74c3c; color: #e74c3c; }
 
 .header-with-back {
   display: flex;
   align-items: center;
   position: relative;
   justify-content: center;
-  margin-bottom: 5px;
 }
 
 .back-link {
@@ -850,25 +845,31 @@ const handleStartClick = () => {
   color: #666;
   font-size: 0.85rem;
   cursor: pointer;
-  padding: 0;
 }
 
-.back-link:hover {
-  color: #e74c3c;
-  text-decoration: underline;
+.back-link:hover { color: #e74c3c; text-decoration: underline; }
+
+/* Utils */
+.lang-switcher {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  z-index: 10001;
+  background: rgba(0,0,0,0.3);
+  backdrop-filter: blur(10px);
+  padding: 4px 12px;
+  border-radius: 20px;
+  color: white;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid rgba(255,255,255,0.2);
 }
 
-/* Custom Scrollbar */
-.content-scroll::-webkit-scrollbar {
-  width: 6px;
-}
+.lang-switcher button { background: none; border: none; color: white; opacity: 0.6; cursor: pointer; }
+.lang-switcher button.active { opacity: 1; font-weight: 700; }
 
-.content-scroll::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.content-scroll::-webkit-scrollbar-thumb {
-  background: #ddd;
-  border-radius: 3px;
-}
+.content-scroll::-webkit-scrollbar { width: 6px; }
+.content-scroll::-webkit-scrollbar-track { background: transparent; }
+.content-scroll::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 10px; }
 </style>
