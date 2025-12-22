@@ -1,5 +1,5 @@
 <script setup>
-const props = defineProps(['board', 'selectedTileColor', 'hasStar', 'highlightCenter', 'matchedRegion']);
+const props = defineProps(['board', 'selectedTileColor', 'hasStar', 'highlightCenter', 'matchedRegion', 'highlightedCell']);
 defineEmits(['place']);
 
 const getColorClass = (color) => {
@@ -27,6 +27,13 @@ const isInvalid = (color) => {
         ]"
         @click="$emit('place', r, c)"
       >
+        <!-- Highlight for last move -->
+        <div 
+          v-if="highlightedCell && highlightedCell.row === r && highlightedCell.col === c" 
+          class="highlight-glow"
+          :class="{ 'is-persistent': highlightedCell.persistent }"
+        ></div>
+
         <div class="cell-inner">
           <!-- 核心圖樣 (僅在有 pattern 時顯示) -->
           <div v-if="cell.pattern" class="board-pattern-grid" :style="{ transform: `rotate(${cell.rotation * 90}deg)` }">
@@ -234,5 +241,27 @@ const isInvalid = (color) => {
 @keyframes highlight-pulse {
   0%, 100% { opacity: 0.5; box-shadow: inset 0 0 10px gold; }
   50% { opacity: 1; box-shadow: inset 0 0 30px gold; }
+}
+
+.highlight-glow {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(241, 196, 15, 0.4);
+  box-shadow: inset 0 0 15px rgba(241, 196, 15, 0.8);
+  border: 2px solid #f1c40f;
+  border-radius: 8px;
+  z-index: 10;
+  pointer-events: none;
+  animation: glow-pulse 1s infinite alternate;
+}
+
+.highlight-glow.is-persistent {
+  animation: none;
+  background: rgba(241, 196, 15, 0.2);
+}
+
+@keyframes glow-pulse {
+  from { opacity: 0.5; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
 }
 </style>

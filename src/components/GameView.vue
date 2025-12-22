@@ -5,6 +5,7 @@ import { TileGenerator } from '../logic/tileGenerator';
 import { gameConfig } from '../config';
 import GameBoard from './GameBoard.vue';
 import PlayerArea from './PlayerArea.vue';
+import GameHUD from './GameHUD.vue';
 import { AiAgent } from '../logic/aiAgent';
 
 const props = defineProps(['mode', 'difficulty']);
@@ -32,6 +33,9 @@ const victoryCeremonyActive = ref(false);
 const showToast = ref(false);
 const startToast = ref({ show: false, message: '' });
 const showRedrawMessage = ref(false);
+const turnCount = ref(1);
+const lastMove = ref(null);
+const highlightedCell = ref(null);
 
 function initBoard() {
     const layouts = [
@@ -94,12 +98,13 @@ function handlePlace(r, c) {
     const tile = player.hand[selectedTileIndex.value];
     if (board.value[r][c].color === tile.ornamentColor) return;
 
-    // Undo History
     moveHistory.value.push({
         boardSnapshot: JSON.parse(JSON.stringify(board.value[r][c])),
         tileSnapshot: { ...tile },
         coord: { r, c },
-        tileIndex: selectedTileIndex.value
+        tileIndex: selectedTileIndex.value,
+        turnCountSnapshot: turnCount.value,
+        lastMoveSnapshot: lastMove.value ? JSON.parse(JSON.stringify(lastMove.value)) : null
     });
 
     board.value.forEach(row => row.forEach(cell => cell.lastPlaced = false));
@@ -109,6 +114,16 @@ function handlePlace(r, c) {
         rotation: selectedTileRotation.value,
         lastPlaced: true
     };
+    
+    // Update lastMove before turnCount increments
+    lastMove.value = {
+        playerName: player.name,
+        tile: JSON.parse(JSON.stringify(tile)),
+        row: r,
+        col: c,
+        turn: turnCount.value
+    };
+
     tilesPlayedThisTurn.value++;
     player.hand.splice(selectedTileIndex.value, 1);
 
@@ -134,6 +149,7 @@ function handlePlace(r, c) {
         setTimeout(() => {
             board.value[r][c].rotation = bestRotation;
             matchedRegion.value = regionFound;
+            turnCount.value++; // Increment turn after match confirmed
         }, 300);
 
         setTimeout(() => {
@@ -162,6 +178,8 @@ function handlePlace(r, c) {
             player.eliminated = true;
             checkGameOver();
         }
+        // No match found, but hand not empty. Turn does NOT end.
+        // User (or AI) can continue to place tiles.
     }
     selectedTileIndex.value = -1;
     selectedTileRotation.value = 0;
@@ -211,27 +229,55 @@ async function handleAiTurn() {
             lastPlaced: true
         };
 
+        // Update lastMove for AI
+        lastMove.value = {
+            playerName: player.name,
+            tile: JSON.parse(JSON.stringify(tile)),
+            row: move.row,
+            col: move.col,
+            turn: turnCount.value
+        };
+
         const region = GameLogic.findMatchingRegion(board.value, tile.ornamentColor, GameLogic.rotatePatternTimes(tile.pattern, move.rotation), move.row, move.col);
         setTimeout(() => {
             board.value[move.row][move.col].rotation = move.rotation;
             matchedRegion.value = region;
+            if (region) turnCount.value++;
         }, 300);
 
         tilesPlayedThisTurn.value++;
         player.hand.splice(selectedTileIndex.value, 1);
 
         setTimeout(() => {
-            let drawCount = settings.value.flexibleDraw ? tilesPlayedThisTurn.value : 1;
-            for (let i = 0; i < drawCount; i++) {
-                if (deck.value.length > 0 && player.hand.length < handLimit.value) {
-                    player.hand.push(deck.value.pop());
+            if (region) {
+                // Survival match achieved! Draw and end turn.
+                let drawCount = settings.value.flexibleDraw ? tilesPlayedThisTurn.value : 1;
+                for (let i = 0; i < drawCount; i++) {
+                    if (deck.value.length > 0 && player.hand.length < handLimit.value) {
+                        player.hand.push(deck.value.pop());
+                    }
+                }
+                nextTurn();
+            } else {
+                // No match from this placement.
+                if (player.hand.length === 0) {
+                    // Out of cards and no match -> Eliminated
+                    player.eliminated = true;
+                    checkGameOver();
+                } else {
+                    // Still has cards, try to play another one to get a match!
+                    handleAiTurn();
                 }
             }
-            nextTurn();
         }, 1500);
     } else {
-        player.eliminated = true;
-        nextTurn();
+        // AI Concession
+        startToast.value = { show: true, message: '小精靈認輸了！' };
+        setTimeout(() => {
+            startToast.value.show = false;
+            winner.value = players.value.find(p => !p.isAi).name;
+            victoryCeremonyActive.value = true;
+        }, 1500);
     }
     selectedTileIndex.value = -1;
     selectedTileRotation.value = 0;
@@ -239,13 +285,16 @@ async function handleAiTurn() {
 
 function handleUndo() {
     if (moveHistory.value.length === 0 || matchedRegion.value !== null) return;
-    const lastMove = moveHistory.value.pop();
+    const lastState = moveHistory.value.pop();
     const player = players.value[currentPlayerIndex.value];
-    board.value[lastMove.coord.r][lastMove.coord.c] = lastMove.boardSnapshot;
-    player.hand.splice(lastMove.tileIndex, 0, lastMove.tileSnapshot);
+    board.value[lastState.coord.r][lastState.coord.c] = lastState.boardSnapshot;
+    player.hand.splice(lastState.tileIndex, 0, lastState.tileSnapshot);
+    turnCount.value = lastState.turnCountSnapshot;
+    lastMove.value = lastState.lastMoveSnapshot;
     tilesPlayedThisTurn.value--;
     selectedTileIndex.value = -1;
     selectedTileRotation.value = 0;
+    highlightedCell.value = null;
 }
 
 function nextTurn() {
@@ -287,27 +336,39 @@ function handleBoardClick(r, c) {
 }
 
 function startGame() {
+    gameOver.value = false;
+    winner.value = null;
+    starOnBoard.value = false;
+    waitingForStar.value = false;
+    victoryCeremonyActive.value = false;
+    matchedRegion.value = null;
+    turnCount.value = 1;
+    lastMove.value = null;
+    highlightedCell.value = null;
+    moveHistory.value = [];
+    
     initBoard();
     initDeck();
     
+    const diffLabels = { beginner: '新手', normal: '普通', hard: '困難', expert: '專家' };
     if (props.mode === 'ai') {
         const isAiFirst = Math.random() > 0.5;
-        const diffLabels = { beginner: '新手', normal: '普通', hard: '困難', expert: '專家' };
         players.value = [
             { id: 1, name: '玩家', hand: [], eliminated: false, isAi: false, decorationUses: { 'R': true, 'G': true, 'B': true } },
             { id: 2, name: `聖誕小精靈 (${diffLabels[props.difficulty] || '普通'})`, hand: [], eliminated: false, isAi: true, decorationUses: { 'R': true, 'G': true, 'B': true } }
         ];
         currentPlayerIndex.value = isAiFirst ? 1 : 0;
-        startToast.value = { show: true, message: `裝飾開始，這局由${isAiFirst ? '聖誕小精靈' : '你'}先開始` };
-        setTimeout(() => startToast.value.show = false, 3000);
+        startToast.value = { show: true, message: `新的一局開始，重新發牌中... 這局由${isAiFirst ? '聖誕小精靈' : '你'}先開始` };
     } else {
         players.value = [
             { id: 1, name: '玩家 1', hand: [], eliminated: false, isAi: false, hasMulligan: true, decorationUses: { 'R': true, 'G': true, 'B': true } },
             { id: 2, name: '玩家 2', hand: [], eliminated: false, isAi: false, hasMulligan: true, decorationUses: { 'R': true, 'G': true, 'B': true } }
         ];
         currentPlayerIndex.value = 0;
+        startToast.value = { show: true, message: '新的一局開始，重新發牌中... 由玩家 1 先開始' };
     }
     
+    setTimeout(() => startToast.value.show = false, 3000);
     drawInitialHands();
     if (players.value[currentPlayerIndex.value].isAi) {
         setTimeout(handleAiTurn, 1500);
@@ -345,6 +406,12 @@ onMounted(() => {
     />
 
     <div class="middle-area">
+      <GameHUD 
+        :turn-count="turnCount" 
+        :last-move="lastMove"
+        @highlight-move="(move, persistent) => highlightedCell = move ? { ...move, persistent } : null"
+      />
+
       <div class="board-wrapper">
         <GameBoard 
           :board="board" 
@@ -352,6 +419,7 @@ onMounted(() => {
           :has-star="starOnBoard"
           :highlight-center="waitingForStar"
           :matched-region="matchedRegion"
+          :highlighted-cell="highlightedCell"
           @place="handleBoardClick" 
         />
         
@@ -394,8 +462,16 @@ onMounted(() => {
     <div v-if="victoryCeremonyActive" class="modal-overlay">
       <div class="modal">
         <div class="star-icon">⭐</div>
-        <h2>恭喜！{{ winner }} 贏了！</h2>
-        <p>你獲得了把星星放上聖誕樹頂端的權利</p>
+        <template v-if="winner.includes('聖誕小精靈')">
+          <h2 class="elf-win-msg">
+            恭喜小精靈贏了<br>
+            小精靈想謝謝你陪他玩，想請你幫他放星星，你能幫他放嗎？
+          </h2>
+        </template>
+        <template v-else>
+          <h2>恭喜！{{ winner }} 贏了！</h2>
+          <p>你獲得了把星星放上聖誕樹頂端的權利</p>
+        </template>
         <button @click="confirmVictoryModal">去放星星</button>
       </div>
     </div>
@@ -418,8 +494,9 @@ onMounted(() => {
   height: 100vh;
   padding: 10px;
   width: 100%;
-  max-width: 600px;
+  max-width: 800px; /* Increased to accommodate sidebar HUD on desktop */
   position: relative;
+  margin: 0 auto; /* Center the layout */
 }
 
 .top-nav {

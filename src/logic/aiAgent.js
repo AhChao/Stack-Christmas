@@ -40,8 +40,9 @@ export class AiAgent {
             return matchingMoves[Math.floor(Math.random() * matchingMoves.length)];
         }
 
-        // If no matching moves, return a random legal move
-        return legalMoves.length > 0 ? legalMoves[Math.floor(Math.random() * legalMoves.length)] : null;
+        // If no matching moves, return null to signify it can't match now
+        // The GameView will handle whether it tries another card or concedes.
+        return null;
     }
 
     /**
@@ -53,7 +54,7 @@ export class AiAgent {
         const successfulMoves = legalMoves.filter(m => m.hasMatch);
 
         if(successfulMoves.length === 0) {
-            return this.fallback(legalMoves);
+            return null;
         }
 
         const scoredMoves = successfulMoves.map(move => {
@@ -141,6 +142,7 @@ export class AiAgent {
             return { ...move, score };
         });
 
+        if(scoredMoves.length === 0) return null;
         scoredMoves.sort((a, b) => b.score - a.score);
         return scoredMoves[0];
     }
@@ -153,7 +155,7 @@ export class AiAgent {
             for(let r = 0; r < 3; r++) {
                 for(let c = 0; c < 3; c++) {
                     // Restriction: current color != tile ornament color
-                    if(board[r][c] !== tile.ornamentColor) {
+                    if(board[r][c].color !== tile.ornamentColor) {
                         // Check all 4 rotations
                         for(let rot = 0; rot < 4; rot++) {
                             const rotatedPattern = GameLogic.rotatePatternTimes(tile.pattern, rot);
@@ -178,7 +180,7 @@ export class AiAgent {
         return hand.filter(tile => {
             for(let r = 0; r < 3; r++) {
                 for(let c = 0; c < 3; c++) {
-                    if(board[r][c] !== tile.ornamentColor) {
+                    if(board[r][c].color !== tile.ornamentColor) {
                         for(let rot = 0; rot < 4; rot++) {
                             const rotatedPattern = GameLogic.rotatePatternTimes(tile.pattern, rot);
                             if(GameLogic.checkSurvival(board, tile.ornamentColor, rotatedPattern, r, c)) {
@@ -197,7 +199,7 @@ export class AiAgent {
         let count = 0;
         for(let r = 0; r < 3; r++) {
             for(let c = 0; c < 3; c++) {
-                if(opponentColors.has(newBoard[r][c])) count++;
+                if(opponentColors.has(newBoard[r][c].color)) count++;
                 // Wait, logic guide says "legal placements for opponent hand colors"
                 // Usually means cells they CANNOT place due to color clash.
                 // Let's interpret as: cells that are now blocked for them.
@@ -213,8 +215,10 @@ export class AiAgent {
     }
 
     static simulatePlacement(board, move) {
-        const newBoard = board.map(r => [...r]);
-        newBoard[move.row][move.col] = move.tile.ornamentColor;
+        const newBoard = board.map(r => r.map(c => ({ ...c })));
+        newBoard[move.row][move.col].color = move.tile.ornamentColor;
+        newBoard[move.row][move.col].pattern = move.tile.pattern;
+        newBoard[move.row][move.col].rotation = move.rotation;
         return newBoard;
     }
 
