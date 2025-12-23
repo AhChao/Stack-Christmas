@@ -22,7 +22,22 @@ const currentPlayerIndex = ref(0);
 const gameOver = ref(false);
 const winner = ref(null);
 const selectedTileIndex = ref(-1);
-const selectedTileRotation = ref(0);
+const selectedTileRotation = computed({
+    get() {
+        if (selectedTileIndex.value === -1) return 0;
+        const player = players.value[currentPlayerIndex.value];
+        const tile = player.hand[selectedTileIndex.value];
+        return tile ? (tile.rotation || 0) : 0;
+    },
+    set(val) {
+        if (selectedTileIndex.value === -1) return;
+        const player = players.value[currentPlayerIndex.value];
+        const tile = player.hand[selectedTileIndex.value];
+        if (tile) {
+            tile.rotation = val;
+        }
+    }
+});
 const tilesPlayedThisTurn = ref(0);
 const moveHistory = ref([]);
 const matchedRegion = ref(null);
@@ -39,6 +54,7 @@ const highlightedCell = ref(null);
 const discardPile = ref([]);
 const showPaidMulliganModal = ref(false);
 const selectedTokensForPaidMulligan = ref([]);
+const showSurrenderModal = ref(false);
 
 function initBoard() {
     if (props.randomBoard) {
@@ -131,7 +147,7 @@ function handlePlace(r, c) {
     board.value[r][c] = {
         color: tile.ornamentColor,
         pattern: tile.pattern,
-        rotation: selectedTileRotation.value,
+        rotation: tile.rotation,
         lastPlaced: true
     };
     
@@ -150,12 +166,12 @@ function handlePlace(r, c) {
     let bestRotation = -1;
     let regionFound = null;
 
-    regionFound = GameLogic.findMatchingRegion(board.value, tile.ornamentColor, GameLogic.rotatePatternTimes(tile.pattern, selectedTileRotation.value), r, c);
+    regionFound = GameLogic.findMatchingRegion(board.value, tile.ornamentColor, GameLogic.rotatePatternTimes(tile.pattern, tile.rotation), r, c);
     if (regionFound) {
-        bestRotation = selectedTileRotation.value;
+        bestRotation = tile.rotation;
     } else {
         for (let rot = 0; rot < 4; rot++) {
-            if (rot === selectedTileRotation.value) continue;
+            if (rot === tile.rotation) continue;
             const rotatedPattern = GameLogic.rotatePatternTimes(tile.pattern, rot);
             regionFound = GameLogic.findMatchingRegion(board.value, tile.ornamentColor, rotatedPattern, r, c);
             if (regionFound) {
@@ -211,7 +227,6 @@ function handlePlace(r, c) {
         // User (or AI) can continue to place tiles.
     }
     selectedTileIndex.value = -1;
-    selectedTileRotation.value = 0;
 }
 
 function checkGameOver() {
@@ -246,6 +261,7 @@ async function handleAiTurn() {
     const move = AiAgent.computeMove(gameState, props.difficulty || 'normal');
     if (move) {
         selectedTileIndex.value = move.tileIndex;
+        // The computed setter for selectedTileRotation will update the tile's rotation
         selectedTileRotation.value = move.rotation;
         await new Promise(r => setTimeout(r, 1200));
         
@@ -333,7 +349,6 @@ async function handleAiTurn() {
         }, 1500);
     }
     selectedTileIndex.value = -1;
-    selectedTileRotation.value = 0;
 }
 
 function handleUndo() {
@@ -346,7 +361,6 @@ function handleUndo() {
     lastMove.value = lastState.lastMoveSnapshot;
     tilesPlayedThisTurn.value--;
     selectedTileIndex.value = -1;
-    selectedTileRotation.value = 0;
     highlightedCell.value = null;
 }
 
@@ -419,6 +433,20 @@ function handlePaidMulligan() {
     
     showPaidMulliganModal.value = false;
     startToast.value = { show: true, message: `${player.name} 消耗了兩個指示物重抽了手牌！` };
+    setTimeout(() => startToast.value.show = false, 2000);
+}
+
+function confirmSurrender() {
+    const player = players.value[currentPlayerIndex.value];
+    const opponentIndex = (currentPlayerIndex.value + 1) % players.value.length;
+    const opponent = players.value[opponentIndex];
+    
+    showSurrenderModal.value = false;
+    winner.value = opponent.name;
+    // Activate victory ceremony so opponent can place the star
+    victoryCeremonyActive.value = true;
+    
+    startToast.value = { show: true, message: `${player.name} 選擇了投降！` };
     setTimeout(() => startToast.value.show = false, 2000);
 }
 
@@ -511,6 +539,7 @@ onMounted(() => {
       :paid-mulligan-enabled="props.paidMulligan"
       @request-paid-mulligan="openPaidMulliganModal"
       :difficulty="props.difficulty"
+      @surrender="showSurrenderModal = true"
     />
 
     <div class="middle-area">
@@ -567,6 +596,7 @@ onMounted(() => {
       :paid-mulligan-enabled="props.paidMulligan"
       @request-paid-mulligan="openPaidMulliganModal"
       :difficulty="props.difficulty"
+      @surrender="showSurrenderModal = true"
     />
 
     <!-- Modal & Toasts -->
@@ -575,8 +605,9 @@ onMounted(() => {
         <div class="star-icon">⭐</div>
         <template v-if="winner.includes('聖誕小精靈')">
           <h2 class="elf-win-msg">
-            恭喜小精靈贏了<br>
-            小精靈想謝謝你陪他玩，想請你幫他放星星，你能幫他放嗎？
+            小精靈贏了！✨<br>
+            「謝謝你陪我玩這麼精彩的一局！<br>
+            我也想看聖誕樹亮起來，你能幫我把星星放上去嗎？」
           </h2>
         </template>
         <template v-else>
@@ -629,6 +660,19 @@ onMounted(() => {
         </div>
       </div>
     </div>
+
+    <!-- Surrender Confirmation Modal -->
+    <div v-if="showSurrenderModal" class="modal-overlay">
+      <div class="modal surrender-modal">
+        <div class="surrender-icon">🏳️</div>
+        <h3>確定要投降嗎？</h3>
+        <p>你確定要把放置星星的權利讓給對方嗎？</p>
+        <div class="modal-actions">
+          <button @click="showSurrenderModal = false" class="cancel-btn">取消</button>
+          <button @click="confirmSurrender" class="confirm-btn">確定投降</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -653,13 +697,22 @@ onMounted(() => {
 }
 
 .back-btn {
-  background: rgba(255,255,255,0.8);
-  border: 1px solid #ddd;
-  padding: 5px 10px;
-  border-radius: 20px;
-  font-size: 0.8rem;
+  background: rgba(255, 255, 255, 0.9);
+  border: 2px solid #e74c3c;
+  padding: 8px 16px;
+  border-radius: 50px;
+  font-size: 0.9rem;
   cursor: pointer;
-  color: #333;
+  color: #c0392b;
+  font-weight: 600;
+  transition: all 0.3s;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+.back-btn:hover {
+  transform: scale(1.05);
+  background: white;
+  box-shadow: 0 6px 15px rgba(0,0,0,0.15);
 }
 
 .middle-area {
@@ -702,9 +755,38 @@ onMounted(() => {
 
 .modal {
   background: white;
-  padding: 30px;
-  border-radius: 20px;
+  padding: 40px;
+  border-radius: 30px;
   text-align: center;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+  max-width: 90%;
+  border: 4px solid #f1c40f;
+}
+
+.elf-win-msg {
+  color: #1a472a;
+  line-height: 1.6;
+  font-size: 1.3rem;
+  margin-bottom: 25px;
+}
+
+.modal button, .game-over-overlay button {
+  background: #e74c3c;
+  color: white;
+  border: none;
+  padding: 12px 30px;
+  border-radius: 50px;
+  font-size: 1.1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  box-shadow: 0 6px 20px rgba(231, 76, 60, 0.4);
+}
+
+.modal button:hover, .game-over-overlay button:hover {
+  transform: translateY(-5px) scale(1.05);
+  box-shadow: 0 10px 25px rgba(231, 76, 60, 0.5);
+  background: #ff5e4d;
 }
 
 .game-over-overlay {
@@ -841,5 +923,16 @@ onMounted(() => {
 .confirm-btn:disabled {
   background: #ccc;
   cursor: not-allowed;
+}
+
+.surrender-icon {
+  font-size: 3rem;
+  margin-bottom: 10px;
+}
+
+.surrender-modal p {
+  margin: 15px 0;
+  color: #666;
+  line-height: 1.5;
 }
 </style>

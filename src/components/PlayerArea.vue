@@ -58,7 +58,8 @@ const emit = defineEmits([
   'mulligan', 
   'selectDeco', 
   'undo',
-  'requestPaidMulligan'
+  'requestPaidMulligan',
+  'surrender'
 ]);
 
 const availableTokensCount = computed(() => {
@@ -123,13 +124,16 @@ const availableTokensCount = computed(() => {
       >
         <TileCard 
           :tile="tile" 
-          :rotation="selectedIndex === index ? rotation : 0" 
+          :rotation="tile.rotation" 
         />
       </div>
     </div>
 
     <div v-if="isCurrent" class="controls">
-      <button @click.stop="$emit('rotateTile')" class="rotate-btn">旋轉圖樣 ↻</button>
+      <div class="main-controls">
+        <button @click.stop="$emit('rotateTile')" class="rotate-btn">旋轉圖樣 ↻</button>
+        <button v-if="!player.isAi" @click.stop="$emit('surrender')" class="surrender-btn" title="將放置星星的權利讓給對方">投降 🏳️</button>
+      </div>
       <button 
         v-if="canUndo" 
         @click.stop="$emit('undo')" 
@@ -271,21 +275,57 @@ const availableTokensCount = computed(() => {
   text-align: center;
 }
 
+.rotate-btn, .undo-btn, .mulligan-btn {
+  border-radius: 50px;
+  padding: 8px 16px;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  color: white;
+  margin: 0 5px;
+  font-size: 0.85rem;
+}
+
+.main-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 8px;
+}
+
 .rotate-btn {
   background: #3498db;
-  font-size: 0.9rem;
-  margin-right: 5px;
 }
 
 .undo-btn {
   background: #9b59b6;
-  font-size: 0.9rem;
-  margin-right: 5px;
 }
 
 .mulligan-btn {
   background: #f39c12;
-  font-size: 0.9rem;
+}
+
+.rotate-btn:hover, .undo-btn:hover, .mulligan-btn:hover {
+  transform: translateY(-3px) scale(1.05);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+  filter: brightness(1.1);
+}
+
+.rotate-btn:active, .undo-btn:active, .mulligan-btn:active, .surrender-btn:active {
+  transform: translateY(0) scale(0.95);
+}
+
+.surrender-btn {
+  background: #7f8c8d;
+}
+
+.surrender-btn:hover {
+  background: #95a5a6;
+  transform: translateY(-3px) scale(1.05);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.15);
 }
 
 .hint {

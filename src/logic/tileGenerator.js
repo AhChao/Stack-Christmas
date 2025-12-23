@@ -26,7 +26,8 @@ export class TileGenerator {
                         id: `tile-${index}-${ornamentColor}`,
                         ornamentColor,
                         pattern,
-                        patternId: index
+                        patternId: index,
+                        rotation: 0
                     });
                 }
             });

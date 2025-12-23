@@ -74,6 +74,41 @@ export class GameLogic {
         ];
     }
 
+    /**
+     * 統計一個圖樣在板面上「差一格就匹配」的區域數量
+     */
+    static countPotentialMatches(board, pattern) {
+        let count = 0;
+        const newBoard = board.map(r => r.map(c => typeof c === 'string' ? c : c.color));
+
+        for(let r = 0; r <= 1; r++) {
+            for(let c = 0; c <= 1; c++) {
+                let mismatches = 0;
+                for(let i = 0; i < 2; i++) {
+                    for(let j = 0; j < 2; j++) {
+                        if(newBoard[r + i][c + j] !== pattern[i][j]) {
+                            mismatches++;
+                        }
+                    }
+                }
+                if(mismatches === 1) count++;
+            }
+        }
+        return count;
+    }
+
+    /**
+     * 獲取目前板面的顏色分佈
+     */
+    static getColorDistribution(board) {
+        const distribution = {};
+        board.flat().forEach(cell => {
+            const color = typeof cell === 'string' ? cell : cell.color;
+            distribution[color] = (distribution[color] || 0) + 1;
+        });
+        return distribution;
+    }
+
     static rotatePatternTimes(pattern, times) {
         let result = pattern;
         for(let i = 0; i < times % 4; i++) {
