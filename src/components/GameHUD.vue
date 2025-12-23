@@ -1,8 +1,18 @@
 <script setup>
+import { computed } from 'vue';
+
 const props = defineProps({
   turnCount: Number,
-  lastMove: Object
+  lastMove: Object,
+  lang: String
 });
+
+const translations = {
+  zh: { turn: '回合', lastMove: '最後一動' },
+  en: { turn: 'TURN', lastMove: 'LAST MOVE' }
+};
+
+const gt = computed(() => translations[props.lang || 'zh']);
 
 const emit = defineEmits(['highlightMove']);
 </script>
@@ -11,7 +21,7 @@ const emit = defineEmits(['highlightMove']);
   <div class="game-hud">
     <!-- Turn Indicator -->
     <div class="hud-box turn-box">
-      <div class="label">TURN</div>
+      <div class="label">{{ gt.turn }}</div>
       <div class="value">{{ turnCount }}</div>
     </div>
 
@@ -23,7 +33,7 @@ const emit = defineEmits(['highlightMove']);
       @mouseleave="$emit('highlightMove', null)"
       @click="$emit('highlightMove', lastMove, true)"
     >
-      <div class="label">LAST MOVE</div>
+      <div class="label">{{ gt.lastMove }}</div>
       <div class="move-info">
         <div class="player">{{ lastMove.playerName }}</div>
         <div class="detail">
@@ -161,4 +171,3 @@ const emit = defineEmits(['highlightMove']);
   }
 }
 </style>
-

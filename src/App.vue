@@ -4,6 +4,7 @@ import IntroView from './components/IntroView.vue';
 import GameView from './components/GameView.vue';
 
 const currentGame = ref(null); // { mode, difficulty }
+const currentLang = ref('zh');
 
 const checkUrlParams = () => {
   const params = new URLSearchParams(window.location.search);
@@ -34,6 +35,9 @@ const handleStart = (settings) => {
   if (settings.paidMulligan) {
     params.set('paidMulligan', 'true');
   }
+  if (settings.lang) {
+    currentLang.value = settings.lang;
+  }
   
   // 更新 URL 但不刷頁面
   const newUrl = `${window.location.pathname}?${params.toString()}`;
@@ -56,15 +60,28 @@ onMounted(() => {
 
 <template>
   <div class="game-container">
+    <div class="lang-switcher">
+      <button 
+        :class="{ active: currentLang === 'zh' }" 
+        @click="currentLang = 'zh'"
+      >繁體中文</button>
+      <span class="sep">|</span>
+      <button 
+        :class="{ active: currentLang === 'en' }" 
+        @click="currentLang = 'en'"
+      >EN</button>
+    </div>
+
     <GameView 
       v-if="currentGame" 
       :mode="currentGame.mode" 
       :difficulty="currentGame.difficulty"
       :random-board="currentGame.randomBoard"
       :paid-mulligan="currentGame.paidMulligan"
+      :lang="currentLang"
       @back="handleBack"
     />
-    <IntroView v-else @start="handleStart" />
+    <IntroView v-else :lang="currentLang" @start="handleStart" />
   </div>
 </template>
 
@@ -80,11 +97,11 @@ body {
   margin: 0;
   font-family: 'Inter', sans-serif;
   background: var(--bg-color);
-  overflow: hidden;
+  overflow-x: hidden;
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 100vh;
+  min-height: 100vh;
 }
 
 .game-container {
@@ -94,5 +111,76 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
+}
+
+/* Lang Switcher */
+.lang-switcher {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  z-index: 10001;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  padding: 6px 16px;
+  border-radius: 24px;
+  color: white;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  transition: all 0.3s;
+}
+
+.lang-switcher button {
+  background: none;
+  border: none;
+  color: white;
+  opacity: 0.6;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+  padding: 2px 4px;
+}
+
+.lang-switcher button.active {
+  opacity: 1;
+  font-weight: 800;
+  text-shadow: 0 0 10px rgba(255,255,255,0.5);
+}
+
+.lang-switcher .sep {
+  opacity: 0.3;
+  font-size: 0.8rem;
+}
+
+/* Big Screen Optimization */
+@media (min-width: 1200px) {
+  .lang-switcher {
+    top: 30px;
+    right: 40px;
+    background: rgba(0, 0, 0, 0.1);
+    color: #1a472a;
+    border-color: rgba(26, 71, 42, 0.2);
+  }
+  .lang-switcher button {
+    color: white;
+  }
+  .lang-switcher button.active {
+    color: #e74c3c;
+    text-shadow: none;
+  }
+}
+
+/* On mobile, keep it floating but maybe relative to card if needed, 
+   but absolute top-right is usually safest for "always visible" */
+@media (max-width: 600px) {
+  .lang-switcher {
+    top: 15px;
+    right: 15px;
+    padding: 4px 12px;
+    font-size: 0.8rem;
+    background: rgba(0, 0, 0, 0.4);
+  }
 }
 </style>

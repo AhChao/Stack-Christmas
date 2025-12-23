@@ -26,8 +26,16 @@ export class GameLogic {
      * @returns {Object|null} { r, c } 或 null
      */
     static findMatchingRegion(board, ornamentColor, pattern, row, col) {
+        const matches = this.findAllMatchingRegions(board, ornamentColor, pattern, row, col);
+        return matches.length > 0 ? matches[0] : null;
+    }
+
+    /**
+     * 尋找並返回「所有」匹配的 2x2 區域左上角座標
+     * @returns {Array} [{ r, c }, ...]
+     */
+    static findAllMatchingRegions(board, ornamentColor, pattern, row, col) {
         // 預先模擬放置後的板面
-        // 注意：這裡假設 board 可能是物件陣列，所以要取 .color
         const newBoard = board.map(r => r.map(c => typeof c === 'string' ? c : c.color));
         newBoard[row][col] = ornamentColor;
 
@@ -38,13 +46,14 @@ export class GameLogic {
             { r: row, c: col }
         ];
 
+        const matches = [];
         for(const region of potentialRegions) {
             if(this.isMatch(newBoard, pattern, region.r, region.c)) {
-                return region;
+                matches.push(region);
             }
         }
 
-        return null;
+        return matches;
     }
 
     /**

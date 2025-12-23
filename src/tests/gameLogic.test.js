@@ -61,4 +61,23 @@ describe('GameLogic', () => {
         ];
         expect(GameLogic.checkSurvival(initialBoard, 'R', pattern, 0, 0)).toBe(false);
     });
+
+    it('應能正確尋找所有匹配區域 (findAllMatchingRegions)', () => {
+        // 設定一個板面，使得在 (1,1) 放置 'R' 可以同時達成兩個匹配
+        // 圖樣定為 [[R, R], [R, R]]
+        const board = [
+            ['R', 'R', 'R'],
+            ['R', 'G', 'R'],
+            ['B', 'B', 'B']
+        ];
+        const pattern = [
+            ['R', 'R'],
+            ['R', 'R']
+        ];
+        // 放置後 (1,1) 變 R，左上(0,0) 與 右上(0,1) 的 2x2 都會變成全 R
+        const matches = GameLogic.findAllMatchingRegions(board, 'R', pattern, 1, 1);
+        expect(matches.length).toBe(2);
+        expect(matches).toContainEqual({ r: 0, c: 0 });
+        expect(matches).toContainEqual({ r: 0, c: 1 });
+    });
 });

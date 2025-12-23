@@ -52,16 +52,18 @@ const isInvalid = (color) => {
         </div>
         
         <!-- 匹配高亮亮框 (2x2) -->
-        <div 
-          v-if="matchedRegion && r >= matchedRegion.r && r < matchedRegion.r + 2 && c >= matchedRegion.c && c < matchedRegion.c + 2" 
-          class="match-highlight"
-          :class="{ 
-            'top': r === matchedRegion.r, 
-            'left': c === matchedRegion.c,
-            'right': c === matchedRegion.c + 1,
-            'bottom': r === matchedRegion.r + 1
-          }"
-        ></div>
+        <template v-for="(region, idx) in matchedRegions" :key="idx">
+          <div 
+            v-if="r >= region.r && r < region.r + 2 && c >= region.c && c < region.c + 2" 
+            class="match-highlight"
+            :class="{ 
+              'top': r === region.r, 
+              'left': c === region.c,
+              'right': c === region.c + 1,
+              'bottom': r === region.r + 1
+            }"
+          ></div>
+        </template>
 
         <div v-if="r === 1 && c === 1 && highlightCenter" class="center-highlight"></div>
       </div>

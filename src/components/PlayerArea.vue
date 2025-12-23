@@ -31,6 +31,15 @@ const getDecoImage = (color, playerId) => {
   return decoImages[key];
 };
 
+const getSoloDecoImage = (color, n) => {
+  if (props.mode !== 'solo') return getDecoImage(color, props.player.id);
+  // In solo mode, use n to pick pattern 1 or 2
+  const patternIndex = n === 2 ? 1 : 2; // Default starting with 2 of each? Or n is 1,2?
+  // Actually n in v-for is 1, 2 if limit is 2.
+  // We want to use pattern 1 and pattern 2.
+  return decoImages[`${color.toLowerCase()}${n}`];
+};
+
 const elfImages = {
   beginner: noviceImg,
   normal: normalImg,
@@ -49,7 +58,11 @@ const props = defineProps([
   'selectedDeco',
   'canUndo',
   'paidMulliganEnabled',
-  'difficulty'
+  'mulliganTokensCost',
+  'difficulty',
+  'mode',
+  'showHelper',
+  'lang'
 ]);
 
 const emit = defineEmits([
@@ -59,12 +72,51 @@ const emit = defineEmits([
   'selectDeco', 
   'undo',
   'requestPaidMulligan',
-  'surrender'
+  'surrender',
+  'toggleHelper'
 ]);
 
 const availableTokensCount = computed(() => {
-  return Object.values(props.player.decorationUses).filter(u => u).length;
+  return Object.values(props.player.decorationUses).reduce((acc, val) => {
+    if (typeof val === 'number') return acc + val;
+    return acc + (val ? 1 : 0);
+  }, 0);
 });
+
+const translations = {
+  zh: {
+    eliminated: '已淘汰',
+    rotate: '旋轉 ↻',
+    surrender: '投降 🏳️',
+    undo: '復原 ↩️',
+    mulligan: '重整 ♻️',
+    helper: '輔助',
+    hint: '點擊板面處放置飾物',
+    soloSurrender: '放棄裝飾 🏁',
+    mulliganTitle: '消耗指示物重抽手牌',
+    surrenderTitle: '將放置星星的權利讓給對方',
+    soloSurrenderTitle: '以此裝飾成果結束遊戲',
+    consume: '消耗',
+    tokens: '個指示物重抽'
+  },
+  en: {
+    eliminated: 'Eliminated',
+    rotate: 'Rotate ↻',
+    surrender: 'Surrender 🏳️',
+    undo: 'Undo ↩️',
+    mulligan: 'Redraw ♻️',
+    helper: 'Helper',
+    hint: 'Click board to place decoration',
+    soloSurrender: 'Finish 🏁',
+    mulliganTitle: 'Consume tokens to redraw your hand',
+    surrenderTitle: 'Give the star-placing right to your opponent',
+    soloSurrenderTitle: 'Finish the game with current decoration',
+    consume: 'Spend',
+    tokens: 'tokens to redraw'
+  }
+};
+
+const gt = computed(() => translations[props.lang || 'zh']);
 </script>
 
 <template>
@@ -86,32 +138,41 @@ const availableTokensCount = computed(() => {
 
       <!-- 精心裝飾小圓框 -->
       <div v-if="decoEnabled" class="deco-container">
-        <div 
-          v-for="color in ['R', 'G', 'B']" 
-          :key="color"
-          class="deco-box"
-          :class="{ 
-            'is-selected': selectedDeco === color,
-            'is-used': !player.decorationUses[color]
-          }"
-          @click="player.decorationUses[color] && $emit('selectDeco', selectedDeco === color ? null : color)"
-        >
-          <img :src="getDecoImage(color, player.id)" :alt="color" />
-        </div>
+        <template v-for="color in ['R', 'G', 'B']" :key="color">
+          <div 
+            v-for="n in player.decorationUses[color]"
+            :key="color + n"
+            class="deco-box"
+            :class="{ 
+              'is-selected': selectedDeco === color,
+              'is-used': false
+            }"
+            @click="$emit('selectDeco', selectedDeco === color ? null : color)"
+          >
+            <img :src="getSoloDecoImage(color, n)" :alt="color" />
+          </div>
+          <!-- Show grayscale if none left of this color -->
+          <div 
+            v-if="player.decorationUses[color] === 0"
+            class="deco-box is-used"
+          >
+            <img :src="getSoloDecoImage(color, 1)" :alt="color" />
+          </div>
+        </template>
 
         <!-- Paid Mulligan Button (Only for current human player) -->
         <button 
           v-if="paidMulliganEnabled && isCurrent && !player.isAi"
           class="paid-mulligan-icon-btn"
-          :disabled="availableTokensCount < 2"
+          :disabled="availableTokensCount < (mulliganTokensCost || 2)"
           @click="$emit('requestPaidMulligan')"
-          title="消耗兩個指示物重抽"
+          :title="`${gt.consume} ${mulliganTokensCost || 2} ${gt.tokens}`"
         >
           ♻️
         </button>
       </div>
 
-      <span v-if="player.eliminated" class="eliminated">已淘汰</span>
+      <span v-if="player.eliminated" class="eliminated">{{ gt.eliminated }}</span>
     </div>
     
     <div class="hand">
@@ -129,27 +190,23 @@ const availableTokensCount = computed(() => {
       </div>
     </div>
 
-    <div v-if="isCurrent" class="controls">
-      <div class="main-controls">
-        <button @click.stop="$emit('rotateTile')" class="rotate-btn">旋轉圖樣 ↻</button>
-        <button v-if="!player.isAi" @click.stop="$emit('surrender')" class="surrender-btn" title="將放置星星的權利讓給對方">投降 🏳️</button>
+      <div class="controls">
+        <div class="main-controls">
+          <button @click.stop="$emit('rotateTile')" class="rotate-btn">{{ gt.rotate }}</button>
+          <button v-if="!player.isAi" @click.stop="$emit('surrender')" class="surrender-btn" :title="mode === 'solo' ? gt.soloSurrenderTitle : gt.surrenderTitle">
+            {{ mode === 'solo' ? gt.soloSurrender : gt.surrender }}
+          </button>
+          <button v-if="canUndo" @click.stop="$emit('undo')" class="undo-btn">{{ gt.undo }}</button>
+          <label v-if="mode === 'solo'" class="helper-toggle">
+            <input type="checkbox" :checked="showHelper" @change="$emit('toggleHelper')" />
+            <span>{{ gt.helper }}</span>
+          </label>
+        </div>
+        <div class="sub-controls">
+          <button v-if="mulliganEnabled && player.hasMulligan" @click.stop="$emit('mulligan')" class="mulligan-btn">{{ gt.mulligan }}</button>
+        </div>
+        <p class="hint">{{ gt.hint }}</p>
       </div>
-      <button 
-        v-if="canUndo" 
-        @click.stop="$emit('undo')" 
-        class="undo-btn"
-      >
-        復原上一步 ↩️
-      </button>
-      <button 
-        v-if="mulliganEnabled && player.hasMulligan" 
-        @click.stop="$emit('mulligan')" 
-        class="mulligan-btn"
-      >
-        手牌重整 (限一次)
-      </button>
-      <p class="hint">點擊板面處放置</p>
-    </div>
   </div>
 </template>
 
@@ -275,7 +332,7 @@ const availableTokensCount = computed(() => {
   text-align: center;
 }
 
-.rotate-btn, .undo-btn, .mulligan-btn {
+.rotate-btn, .undo-btn, .mulligan-btn, .surrender-btn {
   border-radius: 50px;
   padding: 8px 16px;
   border: none;
@@ -284,15 +341,16 @@ const availableTokensCount = computed(() => {
   transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   box-shadow: 0 4px 10px rgba(0,0,0,0.1);
   color: white;
-  margin: 0 5px;
+  margin: 0;
   font-size: 0.85rem;
+  white-space: nowrap;
 }
 
-.main-controls {
+.main-controls, .sub-controls {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 5px;
+  gap: 8px;
   margin-bottom: 8px;
 }
 
@@ -301,14 +359,33 @@ const availableTokensCount = computed(() => {
 }
 
 .undo-btn {
-  background: #9b59b6;
+  background: #f39c12;
+}
+
+.helper-toggle {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(255,255,255,0.8);
+  padding: 4px 10px;
+  border-radius: 20px;
+  border: 1px solid #ccc;
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: #444;
+  margin-left: 5px;
+  user-select: none;
+}
+
+.helper-toggle input {
+  cursor: pointer;
 }
 
 .mulligan-btn {
   background: #f39c12;
 }
 
-.rotate-btn:hover, .undo-btn:hover, .mulligan-btn:hover {
+.rotate-btn:hover, .undo-btn:hover, .mulligan-btn:hover, .surrender-btn:hover {
   transform: translateY(-3px) scale(1.05);
   box-shadow: 0 8px 20px rgba(0,0,0,0.15);
   filter: brightness(1.1);
@@ -319,13 +396,8 @@ const availableTokensCount = computed(() => {
 }
 
 .surrender-btn {
-  background: #7f8c8d;
-}
-
-.surrender-btn:hover {
-  background: #95a5a6;
-  transform: translateY(-3px) scale(1.05);
-  box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+  background: #95a5a6; /* Slightly lighter gray to match vibey colors better */
+  border: 1px solid rgba(255,255,255,0.2);
 }
 
 .hint {
