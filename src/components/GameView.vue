@@ -578,11 +578,20 @@ function openPaidMulliganModal() {
 }
 
 function toggleTokenSelection(color) {
-    const index = selectedTokensForPaidMulligan.value.indexOf(color);
-    if (index > -1) {
-        selectedTokensForPaidMulligan.value.splice(index, 1);
-    } else if (selectedTokensForPaidMulligan.value.length < requiredMulliganTokens.value) {
-        selectedTokensForPaidMulligan.value.push(color);
+    const player = players.value[currentPlayerIndex.value];
+    const currentCount = selectedTokensForPaidMulligan.value.filter(c => c === color).length;
+    
+    // For Solo, we allow picking the same color twice if we have 2. 
+    // In simpler implementation, we'll just treat it as a list of colors to spend.
+    if (selectedTokensForPaidMulligan.value.length < requiredMulliganTokens.value || selectedTokensForPaidMulligan.value.includes(color)) {
+        const index = selectedTokensForPaidMulligan.value.indexOf(color);
+        if (index > -1) {
+            selectedTokensForPaidMulligan.value.splice(index, 1);
+        } else {
+            if (currentCount < player.decorationUses[color]) {
+                selectedTokensForPaidMulligan.value.push(color);
+            }
+        }
     }
 }
 
@@ -677,15 +686,15 @@ function startGame() {
     if (props.mode === 'ai') {
         const isAiFirst = Math.random() > 0.5;
         players.value = [
-            { id: 1, name: gt.value.player, hand: [], eliminated: false, isAi: false, decorationUses: { 'R': true, 'G': true, 'B': true } },
-            { id: 2, name: `${gt.value.elfName} (${diffLabels[props.difficulty] || gt.value.normal})`, hand: [], eliminated: false, isAi: true, decorationUses: { 'R': true, 'G': true, 'B': true } }
+            { id: 1, name: gt.value.player, hand: [], eliminated: false, isAi: false, decorationUses: { 'R': 1, 'G': 1, 'B': 1 } },
+            { id: 2, name: `${gt.value.elfName} (${diffLabels[props.difficulty] || gt.value.normal})`, hand: [], eliminated: false, isAi: true, decorationUses: { 'R': 1, 'G': 1, 'B': 1 } }
         ];
         currentPlayerIndex.value = isAiFirst ? 1 : 0;
         startToast.value = { show: true, message: gt.value.newGameRedraw + ' ' + (isAiFirst ? gt.value.elfName : gt.value.you) + gt.value.turnStartSuffix };
     } else if (props.mode === 'pvp') {
         players.value = [
-            { id: 1, name: gt.value.p1, hand: [], eliminated: false, isAi: false, hasMulligan: true, decorationUses: { 'R': true, 'G': true, 'B': true } },
-            { id: 2, name: gt.value.p2, hand: [], eliminated: false, isAi: false, hasMulligan: true, decorationUses: { 'R': true, 'G': true, 'B': true } }
+            { id: 1, name: gt.value.p1, hand: [], eliminated: false, isAi: false, hasMulligan: true, decorationUses: { 'R': 1, 'G': 1, 'B': 1 } },
+            { id: 2, name: gt.value.p2, hand: [], eliminated: false, isAi: false, hasMulligan: true, decorationUses: { 'R': 1, 'G': 1, 'B': 1 } }
         ];
         currentPlayerIndex.value = 0;
         startToast.value = { show: true, message: gt.value.newGameRedraw + ' ' + gt.value.p1 + gt.value.turnStartSuffix };
@@ -830,7 +839,7 @@ onMounted(() => {
       @rotate-tile="!players[1].isAi && (selectedTileRotation = (selectedTileRotation + 1) % 4)"
       :selected-index="currentPlayerIndex === 1 ? selectedTileIndex : -1"
       :rotation="selectedTileRotation"
-      :deco-enabled="settings.exquisiteDecoration && settings.playerCount === 2"
+      :deco-enabled="props.mode === 'solo' || (settings.exquisiteDecoration && settings.playerCount === 2)"
       :selected-deco="selectedDecorationColor"
       @select-deco="(color) => !players[1].isAi && (selectedDecorationColor = color)"
       :can-undo="!players[1].isAi && moveHistory.length > 0"
@@ -941,7 +950,7 @@ onMounted(() => {
       @rotate-tile="!players[0].isAi && (selectedTileRotation = (selectedTileRotation + 1) % 4)"
       :selected-index="currentPlayerIndex === 0 ? selectedTileIndex : -1"
       :rotation="selectedTileRotation"
-      :deco-enabled="settings.exquisiteDecoration && settings.playerCount === 2"
+      :deco-enabled="props.mode === 'solo' || (settings.exquisiteDecoration && settings.playerCount === 2)"
       :selected-deco="selectedDecorationColor"
       @select-deco="(color) => !players[0].isAi && (selectedDecorationColor = color)"
       :can-undo="!players[0].isAi && moveHistory.length > 0"
@@ -1000,13 +1009,13 @@ onMounted(() => {
             :key="color"
             class="token-item"
             :class="{ 
-              'selected': selectedTokensForPaidMulligan.includes(color),
-              'disabled': !players[currentPlayerIndex].decorationUses[color]
+              'selected': selectedTokensForPaidMulligan.filter(c => c === color).length > 0,
+              'disabled': players[currentPlayerIndex].decorationUses[color] === 0
             }"
-            @click="players[currentPlayerIndex].decorationUses[color] && toggleTokenSelection(color)"
+            @click="players[currentPlayerIndex].decorationUses[color] > 0 && toggleTokenSelection(color)"
           >
             <div class="token-circle" :style="{ backgroundColor: 'var(--' + color.toLowerCase() + '-color)' }"></div>
-            <span>{{ gt[color.toLowerCase() + 'Color'] }}</span>
+            <span>{{ gt[color.toLowerCase() + 'Color'] }} ({{ selectedTokensForPaidMulligan.filter(c => c === color).length }}/{{ players[currentPlayerIndex].decorationUses[color] }})</span>
           </div>
         </div>
 
@@ -1014,7 +1023,7 @@ onMounted(() => {
           <button @click="showPaidMulliganModal = false" class="cancel-btn">{{ gt.cancel }}</button>
           <button 
             @click="handlePaidMulligan" 
-            :disabled="selectedTokensForPaidMulligan.length !== requiredMulliganTokens.value"
+            :disabled="selectedTokensForPaidMulligan.length !== requiredMulliganTokens"
             class="confirm-btn"
           >
             {{ gt.confirmRedraw }} ({{ selectedTokensForPaidMulligan.length }}/{{ requiredMulliganTokens }})
@@ -1092,7 +1101,7 @@ onMounted(() => {
   flex-direction: column;
   justify-content: space-between;
   height: 100vh;
-  padding: 10px;
+  padding: 6px;
   width: 100%;
   max-width: 800px; /* Increased to accommodate sidebar HUD on desktop */
   position: relative;
@@ -1103,9 +1112,9 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  padding: 10px;
+  padding: 6px 10px;
   width: 100%;
-  min-height: 80px;
+  min-height: 60px;
 }
 
 .nav-left {

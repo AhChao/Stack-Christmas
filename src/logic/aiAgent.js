@@ -53,7 +53,11 @@ export class AiAgent {
         const legalMoves = this.getAllLegalMoves(board, hand);
         const successfulMoves = legalMoves.filter(m => m.hasMatch);
 
-        if(successfulMoves.length === 0) return null;
+        if(successfulMoves.length === 0) {
+            // Normal AI can only "pad" 1 card to setup a match. 
+            // If it needs 2 or more, it concedes.
+            return this.findSetupMove(board, hand, 1);
+        }
 
         const scoredMoves = successfulMoves.map(move => {
             let score = 10;
@@ -216,8 +220,9 @@ export class AiAgent {
     /**
      * Find a "Setup" move when no immediate match is possible.
      * Looks for a tile that completes a "near-match" for another tile in hand.
+     * @param {number} maxSetupSteps - Maximum number of padding cards allowed to reach a match.
      */
-    static findSetupMove(board, hand) {
+    static findSetupMove(board, hand, maxSetupSteps = Infinity) {
         if(hand.length < 2) return null;
 
         for(let targetIdx = 0; targetIdx < hand.length; targetIdx++) {
@@ -256,7 +261,10 @@ export class AiAgent {
                                 }
 
                                 // 4. Check if we have enough tiles to fix the other mismatches
-                                if(otherMismatches.length > 0 && otherMismatches.length < hand.length) {
+                                // AND check if it's within the allowed steps for this AI level
+                                if(otherMismatches.length > 0 &&
+                                    otherMismatches.length <= maxSetupSteps &&
+                                    otherMismatches.length < hand.length) {
                                     let availableIndices = [...othersIndices];
                                     const setupSequence = [];
                                     let pathPossible = true;

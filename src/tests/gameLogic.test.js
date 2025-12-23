@@ -80,4 +80,38 @@ describe('GameLogic', () => {
         expect(matches).toContainEqual({ r: 0, c: 0 });
         expect(matches).toContainEqual({ r: 0, c: 1 });
     });
+
+    it('應能正確統計潛在匹配 (countPotentialMatches)', () => {
+        // 板面上有一個幾乎完成的 2x2
+        // R R (差一個)
+        // R G
+        // Target: All R
+        const board = [
+            ['R', 'R', 'B'],
+            ['R', 'G', 'B'],
+            ['B', 'B', 'B']
+        ];
+        const pattern = [['R', 'R'], ['R', 'R']];
+
+        // (0,0) 的 2x2 是:
+        // R R
+        // R G -> 只有 G 不對 -> 1 個 mismatch -> count++
+
+        const count = GameLogic.countPotentialMatches(board, pattern);
+        // (0,0) is mismatch 1.
+        expect(count).toBeGreaterThanOrEqual(1);
+    });
+
+    it('應能正確計算顏色分佈 (getColorDistribution)', () => {
+        const board = [
+            ['R', 'R', 'G'],
+            ['G', 'B', 'B'],
+            ['B', 'R', 'R']
+        ];
+        // R: 4, G: 2, B: 3
+        const dist = GameLogic.getColorDistribution(board);
+        expect(dist['R']).toBe(4);
+        expect(dist['G']).toBe(2);
+        expect(dist['B']).toBe(3);
+    });
 });

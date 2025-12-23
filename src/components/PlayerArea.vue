@@ -140,23 +140,16 @@ const gt = computed(() => translations[props.lang || 'zh']);
       <div v-if="decoEnabled" class="deco-container">
         <template v-for="color in ['R', 'G', 'B']" :key="color">
           <div 
-            v-for="n in player.decorationUses[color]"
+            v-for="n in (mode === 'solo' ? 2 : 1)"
             :key="color + n"
             class="deco-box"
             :class="{ 
-              'is-selected': selectedDeco === color,
-              'is-used': false
+              'is-selected': selectedDeco === color && n <= player.decorationUses[color],
+              'is-used': n > player.decorationUses[color]
             }"
-            @click="$emit('selectDeco', selectedDeco === color ? null : color)"
+            @click="n <= player.decorationUses[color] && $emit('selectDeco', selectedDeco === color ? null : color)"
           >
             <img :src="getSoloDecoImage(color, n)" :alt="color" />
-          </div>
-          <!-- Show grayscale if none left of this color -->
-          <div 
-            v-if="player.decorationUses[color] === 0"
-            class="deco-box is-used"
-          >
-            <img :src="getSoloDecoImage(color, 1)" :alt="color" />
           </div>
         </template>
 
@@ -212,7 +205,7 @@ const gt = computed(() => translations[props.lang || 'zh']);
 
 <style scoped>
 .player-area {
-  padding: 15px;
+  padding: 10px;
   background: rgba(255,255,255,0.7);
   border-radius: 15px;
   transition: all 0.3s;
@@ -232,13 +225,13 @@ const gt = computed(() => translations[props.lang || 'zh']);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 10px;
+  margin-bottom: 6px;
 }
 
 .player-info {
   display: flex;
   align-items: center;
-  gap: 15px;
+  gap: 10px;
 }
 
 .player-ident {
@@ -268,8 +261,8 @@ const gt = computed(() => translations[props.lang || 'zh']);
 .eliminated { color: var(--r-color); font-weight: bold; }
 
 .ai-avatar-box {
-  width: 60px;
-  height: 60px;
+  width: 50px;
+  height: 50px;
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(8px);
   border-radius: 50%;
@@ -311,7 +304,7 @@ const gt = computed(() => translations[props.lang || 'zh']);
 
 .hand {
   display: flex;
-  gap: 10px;
+  gap: 6px;
   justify-content: center;
 }
 
@@ -328,13 +321,13 @@ const gt = computed(() => translations[props.lang || 'zh']);
 }
 
 .controls {
-  margin-top: 10px;
+  margin-top: 6px;
   text-align: center;
 }
 
 .rotate-btn, .undo-btn, .mulligan-btn, .surrender-btn {
   border-radius: 50px;
-  padding: 8px 16px;
+  padding: 6px 12px;
   border: none;
   font-weight: 600;
   cursor: pointer;
@@ -350,8 +343,8 @@ const gt = computed(() => translations[props.lang || 'zh']);
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
+  gap: 6px;
+  margin-bottom: 6px;
 }
 
 .rotate-btn {

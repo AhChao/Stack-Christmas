@@ -1,5 +1,5 @@
 <script setup>
-const props = defineProps(['board', 'selectedTileColor', 'hasStar', 'highlightCenter', 'matchedRegion', 'highlightedCell']);
+const props = defineProps(['board', 'selectedTileColor', 'hasStar', 'highlightCenter', 'matchedRegions', 'highlightedCell']);
 defineEmits(['place']);
 
 const getColorClass = (color) => {
